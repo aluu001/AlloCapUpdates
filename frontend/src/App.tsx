@@ -178,7 +178,7 @@ const renderRevisedDiffText = (origText: string, revText: string) => {
       {revisedSegments.map((seg, idx) => {
         if (seg.type === 'added') {
           return (
-            <span key={idx} style={{ background: '#e0f7fc', color: '#004d61', padding: '1px 3px', borderRadius: '2px', fontWeight: 600 }}>
+            <span key={idx} style={{ background: '#fef08a', color: '#713f12', padding: '1px 3px', borderRadius: '2px', fontWeight: 600 }}>
               {seg.text}
             </span>
           );
