@@ -143,6 +143,7 @@ export default function App() {
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [isDemoMode, setIsDemoMode] = useState(false);
   const [isConfigured, setIsConfigured] = useState(true);
+  const [thinkingText, setThinkingText] = useState('');
 
   // Chat State
   const [isChatOpen, setIsChatOpen] = useState(false);
@@ -239,7 +240,7 @@ export default function App() {
     }
   };
 
-  // Compare documents handler
+  // Compare documents handler (supporting streaming thoughts)
   const handleCompare = async () => {
     if (!fileA || !fileB) return;
 
@@ -247,6 +248,7 @@ export default function App() {
     if (!isConfigured) {
       setIsLoading(true);
       setIsDemoMode(true);
+      setThinkingText('');
       
       const steps = [
         "Uploading Original File to virtual repository...",
@@ -257,8 +259,25 @@ export default function App() {
         "Structuring differences into JSON format..."
       ];
 
-      for (let i = 0; i < steps.length; i++) {
-        await new Promise((resolve) => setTimeout(resolve, 1500));
+      const thinkingQuotes = [
+        "Analyzing Document A: Apex Lease Agreement v1...\n- Detected 6 distinct pages\n- Identified Table 'Utility Responsibilities' on page 3.\n\n",
+        "Analyzing Document B: revised_lease_v2_signed...\n- Detected 6 distinct pages\n- Layout is slightly more compact; margins decreased to 0.75 in.\n\n",
+        "Starting visual audit (Multimodal comparison mode):\n- Comparing logo headers on Page 1... Brand changed to 'Aegis Property Management Group'.\n- Comparing signatures on page 5... block has shifted to bottom of page 4 due to margin changes.\n\n",
+        "Scanning text & clauses verbatim:\n- Page 1 clause 1.4: Security deposit changed from $2,000 to $2,300. (Calculated delta: +$300)\n- Page 2 clause 2.1: Grace period reduced from 5 days to 3 days.\n- Page 5: Pet policy lease rider has been deleted completely.\n- Page 6: New parking indemnification clause found in Revised file.\n\n",
+        "Auditing table cells page 3:\n- Row 2 'Electricity': landlord obligation has changed to tenant obligation.\n- Row 5 'Fiber Internet': new row added with fee $50/mo.\n\n",
+        "Formulating final audit report in JSON..."
+      ];
+
+      // We run both stepper and typing streams together
+      const totalSteps = steps.length;
+      for (let i = 0; i < totalSteps; i++) {
+        // Stream text
+        const quote = thinkingQuotes[i];
+        for (let c = 0; c < quote.length; c++) {
+          setThinkingText((prev) => prev + quote[c]);
+          await new Promise((r) => setTimeout(r, 12));
+        }
+        await new Promise((r) => setTimeout(r, 700));
       }
 
       setReport(mockReport);
@@ -272,30 +291,68 @@ export default function App() {
 
     setIsLoading(true);
     setIsDemoMode(false);
+    setThinkingText('');
 
     try {
-      // Simulate frontend status steps as request is processed (or poll)
-      // Since it's a single HTTP response, we trigger step indicators based on approximate timing,
-      // or we can print them when the API returns. We will just keep a friendly loading text:
-      
-      const res = await fetch(`${API_BASE}/compare`, {
+      const response = await fetch(`${API_BASE}/compare`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ filenameA: fileA, filenameB: fileB })
       });
 
-      const data = await res.json();
-      if (res.ok && data.success) {
-        setReport(data.report);
-        setChatMessages([
-          { role: 'agent', content: `Hello! I have completed a detailed analysis between "${files.find(f => f.filename === fileA)?.displayName}" and "${files.find(f => f.filename === fileB)?.displayName}". How can I help you digest these updates?` }
-        ]);
-        setActiveTab('summary');
-      } else {
-        alert(data.error || "Comparison failed");
+      if (!response.body) {
+        throw new Error('Readable stream not supported or empty body.');
       }
-    } catch (err) {
-      alert("Error reaching backend. Check if the server is running on port 5001.");
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder('utf-8');
+      let buffer = '';
+
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop() || ''; // Hold onto incomplete line in buffer
+
+        for (const line of lines) {
+          if (!line.trim()) continue;
+          try {
+            const data = JSON.parse(line);
+            if (data.type === 'progress') {
+              // Stepper checklist ticks off on specific logs
+              if (data.message.includes('Uploading Revised')) {
+                setLoadingStep(1);
+              } else if (data.message.includes('Waiting for Original')) {
+                setLoadingStep(2);
+              } else if (data.message.includes('Comparing documents')) {
+                setLoadingStep(3);
+              } else if (data.message.includes('Parsing comparison')) {
+                setLoadingStep(4);
+              }
+            } else if (data.type === 'thought') {
+              setThinkingText((prev) => prev + data.text);
+            } else if (data.type === 'report') {
+              if (data.success && data.report) {
+                setReport(data.report);
+                setChatMessages([
+                  { role: 'agent', content: `Hello! I have completed a detailed analysis between "${files.find(f => f.filename === fileA)?.displayName}" and "${files.find(f => f.filename === fileB)?.displayName}". How can I help you digest these updates?` }
+                ]);
+                setActiveTab('summary');
+              } else {
+                alert(data.error || "Comparison failed");
+              }
+            } else if (data.type === 'error') {
+              alert(`Agent Comparison Error: ${data.error}`);
+            }
+          } catch (err) {
+            console.error("JSON parse error on stream line", err, line);
+          }
+        }
+      }
+    } catch (err: any) {
+      alert(`Error reaching backend: ${err.message}. Check if the server is running on port 5001.`);
     } finally {
       setIsLoading(false);
     }
@@ -571,22 +628,22 @@ export default function App() {
           
           {/* 1. Loading Screen */}
           {isLoading && (
-            <div style={{ position: 'absolute', inset: 0, background: 'hsla(224, 71%, 4%, 0.9)', backdropFilter: 'blur(12px)', zIndex: 100, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '30px', padding: '40px', borderRadius: 'var(--border-radius)' }}>
+            <div style={{ position: 'absolute', inset: 0, background: 'hsla(224, 71%, 4%, 0.95)', backdropFilter: 'blur(12px)', zIndex: 100, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '20px', padding: '40px', borderRadius: 'var(--border-radius)', overflowY: 'auto' }}>
               
               {/* Spinner ring */}
-              <div style={{ position: 'relative', width: '80px', height: '80px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <div style={{ position: 'relative', width: '60px', height: '60px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                 <div style={{ position: 'absolute', inset: 0, border: '4px solid hsla(263, 90%, 50%, 0.1)', borderRadius: '50%' }}></div>
                 <div style={{ position: 'absolute', inset: 0, border: '4px solid transparent', borderTopColor: 'hsl(var(--primary-glow))', borderRightColor: 'hsl(var(--secondary))', borderRadius: '50%', animation: 'spin 1.2s cubic-bezier(0.5, 0, 0.5, 1) infinite' }}></div>
-                <Sparkles size={24} style={{ color: 'hsl(var(--primary-glow))', animation: 'pulse 1.5s infinite ease-in-out' }} />
+                <Sparkles size={20} style={{ color: 'hsl(var(--primary-glow))', animation: 'pulse 1.5s infinite ease-in-out' }} />
               </div>
 
-              <div style={{ textAlign: 'center', maxWidth: '450px', width: '100%' }}>
-                <h3 style={{ fontSize: '20px', fontWeight: 600, marginBottom: '24px', color: '#fff' }} className="glow-text-primary">
+              <div style={{ textAlign: 'center', maxWidth: '520px', width: '100%', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                <h3 style={{ fontSize: '18px', fontWeight: 600, color: '#fff' }} className="glow-text-primary">
                   Auditing Document Comparison
                 </h3>
                 
                 {/* Stepper progress list */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', textAlign: 'left', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', padding: '20px', borderRadius: '12px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', textAlign: 'left', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', padding: '16px', borderRadius: '12px' }}>
                   {[
                     "Staging documents in workspace storage...",
                     "Uploading files to Gemini Secure Gateway...",
@@ -610,6 +667,29 @@ export default function App() {
                       </div>
                     );
                   })}
+                </div>
+
+                {/* Live Agent Reasoning console */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', textAlign: 'left', width: '100%' }}>
+                  <div style={{ fontSize: '11px', textTransform: 'uppercase', color: 'hsl(var(--secondary))', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <Sparkles size={12} className="spin" style={{ animation: 'spin 2s linear infinite' }} /> Live Agent Reasoning
+                  </div>
+                  <div style={{ 
+                    fontFamily: 'monospace', 
+                    fontSize: '11px', 
+                    background: 'rgba(0, 0, 0, 0.45)', 
+                    border: '1px solid hsla(190, 90%, 50%, 0.15)', 
+                    padding: '12px', 
+                    borderRadius: '8px', 
+                    color: 'hsl(190, 90%, 80%)', 
+                    height: '140px', 
+                    overflowY: 'auto', 
+                    whiteSpace: 'pre-wrap',
+                    boxShadow: 'inset 0 0 10px rgba(0,0,0,0.5)',
+                    lineHeight: 1.4
+                  }}>
+                    {thinkingText || "Waiting for model reasoning logs to stream..."}
+                  </div>
                 </div>
               </div>
             </div>
@@ -838,28 +918,27 @@ export default function App() {
                           
                           <p style={{ fontSize: '13px', fontWeight: 600, marginBottom: '12px' }}>{change.description}</p>
                           
-                          {change.type === 'added' ? (
-                            <div style={{ padding: '12px', background: 'rgba(34, 197, 94, 0.06)', border: '1px solid rgba(34, 197, 94, 0.2)', borderRadius: '8px', fontSize: '12px', fontFamily: 'monospace', whiteSpace: 'pre-wrap' }}>
-                              <div style={{ fontSize: '10px', textTransform: 'uppercase', color: 'rgb(34, 197, 94)', fontWeight: 600, marginBottom: '6px' }}>+ Added Verbatim Content</div>
-                              {change.revisedText}
-                            </div>
-                          ) : change.type === 'deleted' ? (
-                            <div style={{ padding: '12px', background: 'rgba(239, 68, 68, 0.06)', border: '1px solid rgba(239, 68, 68, 0.2)', borderRadius: '8px', fontSize: '12px', fontFamily: 'monospace', whiteSpace: 'pre-wrap' }}>
-                              <div style={{ fontSize: '10px', textTransform: 'uppercase', color: 'rgb(239, 68, 68)', fontWeight: 600, marginBottom: '6px' }}>- Deleted Verbatim Content</div>
-                              {change.originalText}
-                            </div>
-                          ) : (
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', fontSize: '12px' }}>
-                              <div style={{ padding: '10px', background: 'rgba(239, 68, 68, 0.08)', border: '1px solid rgba(239, 68, 68, 0.2)', borderRadius: '6px' }}>
-                                <div style={{ fontSize: '10px', textTransform: 'uppercase', color: 'rgb(239, 68, 68)', fontWeight: 600, marginBottom: '4px' }}>Original Segment</div>
-                                <div style={{ fontFamily: 'monospace', whiteSpace: 'pre-wrap' }}>{change.originalText}</div>
+                              {/* Before (Original) */}
+                              <div style={{ padding: '10px', background: change.type === 'added' ? 'transparent' : 'rgba(239, 68, 68, 0.08)', border: change.type === 'added' ? '1px dashed hsla(224, 71%, 20%, 0.6)' : '1px solid rgba(239, 68, 68, 0.2)', borderRadius: '6px', display: 'flex', flexDirection: 'column' }}>
+                                <div style={{ fontSize: '10px', textTransform: 'uppercase', color: change.type === 'added' ? 'hsl(var(--text-muted))' : 'rgb(239, 68, 68)', fontWeight: 600, marginBottom: '4px' }}>Before (Original)</div>
+                                {change.type === 'added' ? (
+                                  <div style={{ color: 'hsl(var(--text-muted))', fontStyle: 'italic', margin: 'auto 0' }}>[No text existed in original document]</div>
+                                ) : (
+                                  <div style={{ fontFamily: 'monospace', whiteSpace: 'pre-wrap' }}>{change.originalText}</div>
+                                )}
                               </div>
-                              <div style={{ padding: '10px', background: 'rgba(34, 197, 94, 0.08)', border: '1px solid rgba(34, 197, 94, 0.2)', borderRadius: '6px' }}>
-                                <div style={{ fontSize: '10px', textTransform: 'uppercase', color: 'rgb(34, 197, 94)', fontWeight: 600, marginBottom: '4px' }}>Revised Segment</div>
-                                <div style={{ fontFamily: 'monospace', whiteSpace: 'pre-wrap' }}>{change.revisedText}</div>
+                              
+                              {/* After (Revised) */}
+                              <div style={{ padding: '10px', background: change.type === 'deleted' ? 'transparent' : 'rgba(34, 197, 94, 0.08)', border: change.type === 'deleted' ? '1px dashed hsla(224, 71%, 20%, 0.6)' : '1px solid rgba(34, 197, 94, 0.2)', borderRadius: '6px', display: 'flex', flexDirection: 'column' }}>
+                                <div style={{ fontSize: '10px', textTransform: 'uppercase', color: change.type === 'deleted' ? 'hsl(var(--text-muted))' : 'rgb(34, 197, 94)', fontWeight: 600, marginBottom: '4px' }}>After (Revised)</div>
+                                {change.type === 'deleted' ? (
+                                  <div style={{ color: 'hsl(var(--text-muted))', fontStyle: 'italic', margin: 'auto 0' }}>[Clause deleted in revised document]</div>
+                                ) : (
+                                  <div style={{ fontFamily: 'monospace', whiteSpace: 'pre-wrap' }}>{change.revisedText}</div>
+                                )}
                               </div>
                             </div>
-                          )}
                         </div>
                       ))
                     )}

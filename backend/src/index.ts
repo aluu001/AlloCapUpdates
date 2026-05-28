@@ -4,7 +4,7 @@ import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
 import { config, ai } from './config';
-import { compareDocuments } from './compareAgent';
+import { compareDocumentsStream } from './compareAgent';
 
 const app = express();
 
@@ -124,7 +124,7 @@ app.get('/api/download/:filename', (req: Request, res: Response) => {
   res.download(filePath, filename.split('-').slice(1).join('-'));
 });
 
-// 5. Compare two documents
+// 5. Compare two documents (streaming responses)
 app.post('/api/compare', async (req: Request, res: Response) => {
   const { filenameA, filenameB } = req.body;
 
@@ -148,22 +148,37 @@ app.post('/api/compare', async (req: Request, res: Response) => {
   const displayNameA = filenameA.split('-').slice(1).join('-');
   const displayNameB = filenameB.split('-').slice(1).join('-');
 
+  // Configure chunked streaming response headers
+  res.setHeader('Content-Type', 'application/json');
+  res.setHeader('Transfer-Encoding', 'chunked');
+
+  const sendChunk = (data: any) => {
+    res.write(JSON.stringify(data) + '\n');
+  };
+
   try {
-    // We log progress on console
-    console.log(`Starting comparison between ${displayNameA} and ${displayNameB}`);
+    console.log(`Starting streaming comparison between ${displayNameA} and ${displayNameB}`);
     
-    const report = await compareDocuments(
+    const report = await compareDocumentsStream(
       pathA,
       pathB,
       displayNameA,
       displayNameB,
-      (msg) => console.log(`[Compare Agent]: ${msg}`)
+      (thought) => {
+        sendChunk({ type: 'thought', text: thought });
+      },
+      (progressMsg) => {
+        sendChunk({ type: 'progress', message: progressMsg });
+        console.log(`[Compare Agent]: ${progressMsg}`);
+      }
     );
 
-    res.json({ success: true, report });
+    sendChunk({ type: 'report', success: true, report });
+    res.end();
   } catch (error: any) {
     console.error('Comparison error:', error);
-    res.status(500).json({ error: `Agent comparison failed: ${error.message}` });
+    sendChunk({ type: 'error', error: error.message });
+    res.end();
   }
 });
 

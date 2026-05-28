@@ -88,19 +88,20 @@ async function waitForFileActive(fileName: string, onProgress?: (msg: string) =>
 /**
  * Compares two uploaded documents using Gemini 3.5 Flash and returns a structured JSON report.
  */
-export async function compareDocuments(
+export async function compareDocumentsStream(
   fileAPath: string,
   fileBPath: string,
   fileAName: string,
   fileBName: string,
-  onProgress?: (msg: string) => void
+  onThought: (thought: string) => void,
+  onProgress: (msg: string) => void
 ) {
   let fileARef: any = null;
   let fileBRef: any = null;
 
   try {
     // 1. Upload original document
-    if (onProgress) onProgress(`Uploading Original Document (${fileAName}) to Gemini Files API...`);
+    onProgress(`Uploading Original Document (${fileAName}) to Gemini Files API...`);
     fileARef = await ai.files.upload({
       file: fileAPath,
       config: {
@@ -110,7 +111,7 @@ export async function compareDocuments(
     });
 
     // 2. Upload revised document
-    if (onProgress) onProgress(`Uploading Revised Document (${fileBName}) to Gemini Files API...`);
+    onProgress(`Uploading Revised Document (${fileBName}) to Gemini Files API...`);
     fileBRef = await ai.files.upload({
       file: fileBPath,
       config: {
@@ -120,15 +121,15 @@ export async function compareDocuments(
     });
 
     // 3. Wait for both files to become ACTIVE
-    if (onProgress) onProgress('Waiting for Original Document to process...');
+    onProgress('Waiting for Original Document to process...');
     await waitForFileActive(fileARef.name, onProgress);
 
-    if (onProgress) onProgress('Waiting for Revised Document to process...');
+    onProgress('Waiting for Revised Document to process...');
     await waitForFileActive(fileBRef.name, onProgress);
 
-    // 4. Generate comparison content
-    if (onProgress) onProgress('Comparing documents textually and visually using Gemini 3.5 Flash...');
-    const response = await ai.models.generateContent({
+    // 4. Generate comparison content stream
+    onProgress('Comparing documents textually and visually using Gemini 3.5 Flash...');
+    const responseStream = await ai.models.generateContentStream({
       model: GEMINI_MODEL,
       contents: [
         {
@@ -158,29 +159,47 @@ export async function compareDocuments(
       config: {
         responseMimeType: 'application/json',
         responseJsonSchema: comparisonSchema,
-        temperature: 0.1 // Keep it low for factual and deterministic extraction
+        temperature: 0.1,
+        thinkingConfig: {
+          thinkingBudget: 4096, // Set thinking tokens budget
+        }
       }
     });
 
-    if (onProgress) onProgress('Parsing comparison results...');
-    const responseText = response.text;
-    if (!responseText) {
+    let fullJsonText = '';
+    for await (const chunk of responseStream) {
+      const parts = chunk.candidates?.[0]?.content?.parts;
+      if (parts) {
+        for (const part of parts) {
+          if (part.thought || (part as any).thought) {
+            if (part.text) {
+              onThought(part.text);
+            }
+          } else {
+            fullJsonText += part.text || '';
+          }
+        }
+      }
+    }
+
+    onProgress('Parsing comparison results...');
+    if (!fullJsonText.trim()) {
       throw new Error('Gemini returned an empty response.');
     }
 
-    return JSON.parse(responseText);
+    return JSON.parse(fullJsonText);
 
   } finally {
     // 5. Cleanup files from Gemini storage
     const cleanupPromises: Promise<any>[] = [];
     if (fileARef?.name) {
-      if (onProgress) onProgress(`Cleaning up original file from Gemini storage...`);
+      onProgress(`Cleaning up original file from Gemini storage...`);
       cleanupPromises.push(ai.files.delete({ name: fileARef.name }).catch(err => {
         console.error(`Failed to delete temporary file ${fileARef.name}:`, err);
       }));
     }
     if (fileBRef?.name) {
-      if (onProgress) onProgress(`Cleaning up revised file from Gemini storage...`);
+      onProgress(`Cleaning up revised file from Gemini storage...`);
       cleanupPromises.push(ai.files.delete({ name: fileBRef.name }).catch(err => {
         console.error(`Failed to delete temporary file ${fileBRef.name}:`, err);
       }));
