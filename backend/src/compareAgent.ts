@@ -41,6 +41,8 @@ const comparisonSchema = {
           tableName: { type: Type.STRING, description: 'Name or description of the table.' },
           type: { type: Type.STRING, description: 'Type of change (e.g., row_added, value_modified, structure_altered).' },
           description: { type: Type.STRING, description: 'Detailed explanation of table changes.' },
+          originalText: { type: Type.STRING, description: 'Verbatim content or cell value before the change (originalText).' },
+          revisedText: { type: Type.STRING, description: 'Verbatim content or cell value after the change (revisedText).' },
           severity: { type: Type.STRING, description: 'Severity of the change (low, medium, high).' }
         },
         required: ['page', 'tableName', 'type', 'description', 'severity']
@@ -55,6 +57,8 @@ const comparisonSchema = {
           page: { type: Type.STRING, description: 'Page number where the visual element is located.' },
           type: { type: Type.STRING, description: 'Type of change (e.g., logo_replaced, diagram_updated, layout_shifted).' },
           description: { type: Type.STRING, description: 'Detailed explanation of visual changes.' },
+          originalText: { type: Type.STRING, description: 'The visual state or text representation before the change (originalText).' },
+          revisedText: { type: Type.STRING, description: 'The visual state or text representation after the change (revisedText).' },
           severity: { type: Type.STRING, description: 'Severity of the change (low, medium, high).' }
         },
         required: ['page', 'type', 'description', 'severity']
@@ -147,7 +151,9 @@ export async function compareDocumentsStream(
                  - For 'modified' items: Verbatim before (originalText) and after (revisedText) segments must be provided.
                  - Never paraphrase or summarize inside the originalText or revisedText fields; extract the exact segments verbatim.
               2. **Tables**: Identify any changes in tables (structure, new rows, new columns, value updates). Be highly specific about the columns, row headers, or cells modified.
+                 - For table changes, always extract the verbatim content/value of the table section or row before (originalText) and after (revisedText) the change. If the row or cell did not exist in one of the documents, set that field to an empty string.
               3. **Visuals & Layout**: Identify any changes in images, charts, flowchart diagrams, headers/footers, or layout styles.
+                 - For visual changes, provide a clear text description of the visual element or layout before (originalText) and after (revisedText) the change (e.g. description of old logo vs new logo, or signature block placement).
               
               Generate a structured JSON output according to the requested schema.`
             },
@@ -162,6 +168,7 @@ export async function compareDocumentsStream(
         temperature: 0.1,
         thinkingConfig: {
           thinkingBudget: 4096, // Set thinking tokens budget
+          includeThoughts: true,
         }
       }
     });

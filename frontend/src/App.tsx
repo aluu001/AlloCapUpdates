@@ -39,6 +39,8 @@ interface TableChange {
   tableName: string;
   type: string;
   description: string;
+  originalText?: string;
+  revisedText?: string;
   severity: 'low' | 'medium' | 'high';
 }
 
@@ -46,6 +48,8 @@ interface VisualChange {
   page: string;
   type: string;
   description: string;
+  originalText?: string;
+  revisedText?: string;
   severity: 'low' | 'medium' | 'high';
 }
 
@@ -106,6 +110,8 @@ const mockReport: ComparisonReport = {
       tableName: "Utility Responsibilities Schedule",
       type: "value_modified",
       description: "Electricity billing shifted from Landlord to Tenant.",
+      originalText: "Electricity: [x] Landlord  [ ] Tenant",
+      revisedText: "Electricity: [ ] Landlord  [x] Tenant",
       severity: "high"
     },
     {
@@ -113,6 +119,8 @@ const mockReport: ComparisonReport = {
       tableName: "Utility Responsibilities Schedule",
       type: "row_added",
       description: "Added a row for High-Speed Fiber Internet fee structure ($50/mo flat fee).",
+      originalText: "",
+      revisedText: "+ Fiber Internet | Flat Fee | $50.00/mo | Tenant",
       severity: "medium"
     }
   ],
@@ -121,12 +129,16 @@ const mockReport: ComparisonReport = {
       page: "1",
       type: "logo_replaced",
       description: "Landlord logo updated from 'Apex Holdings LLC' to 'Aegis Property Management Group'.",
+      originalText: "Image Logo: 'Apex Holdings' with blue triangle symbol.",
+      revisedText: "Image Logo: 'Aegis Property Management' with clean minimalist shield emblem.",
       severity: "low"
     },
     {
       page: "4",
       type: "layout_shifted",
       description: "Signature block moved from page 5 to page 4 due to compact margins.",
+      originalText: "Signature blocks printed on separate Page 5 lease rider.",
+      revisedText: "Signature blocks condensed and shifted to bottom of Page 4.",
       severity: "low"
     }
   ]
@@ -156,19 +168,31 @@ export default function App() {
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
+  const thinkingConsoleRef = useRef<HTMLDivElement>(null);
 
   const [loadingStep, setLoadingStep] = useState(0);
 
+  // Auto-scroll thinking console to bottom
+  useEffect(() => {
+    if (thinkingConsoleRef.current) {
+      thinkingConsoleRef.current.scrollTop = thinkingConsoleRef.current.scrollHeight;
+    }
+  }, [thinkingText]);
+
   useEffect(() => {
     let interval: any;
-    if (isLoading) {
+    if (isLoading && isDemoMode) {
       setLoadingStep(0);
       interval = setInterval(() => {
         setLoadingStep((prev) => Math.min(prev + 1, 4));
       }, 2500);
+    } else if (isLoading && !isDemoMode) {
+      setLoadingStep(0);
+    } else {
+      clearInterval(interval);
     }
     return () => clearInterval(interval);
-  }, [isLoading]);
+  }, [isLoading, isDemoMode]);
 
   // Fetch document lists
   const fetchFiles = async () => {
@@ -628,69 +652,81 @@ export default function App() {
           
           {/* 1. Loading Screen */}
           {isLoading && (
-            <div style={{ position: 'absolute', inset: 0, background: 'hsla(224, 71%, 4%, 0.95)', backdropFilter: 'blur(12px)', zIndex: 100, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '20px', padding: '40px', borderRadius: 'var(--border-radius)', overflowY: 'auto' }}>
+            <div style={{ position: 'absolute', inset: 0, background: 'hsla(224, 71%, 4%, 0.96)', backdropFilter: 'blur(16px)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '40px', borderRadius: 'var(--border-radius)', overflowY: 'auto' }}>
               
-              {/* Spinner ring */}
-              <div style={{ position: 'relative', width: '60px', height: '60px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                <div style={{ position: 'absolute', inset: 0, border: '4px solid hsla(263, 90%, 50%, 0.1)', borderRadius: '50%' }}></div>
-                <div style={{ position: 'absolute', inset: 0, border: '4px solid transparent', borderTopColor: 'hsl(var(--primary-glow))', borderRightColor: 'hsl(var(--secondary))', borderRadius: '50%', animation: 'spin 1.2s cubic-bezier(0.5, 0, 0.5, 1) infinite' }}></div>
-                <Sparkles size={20} style={{ color: 'hsl(var(--primary-glow))', animation: 'pulse 1.5s infinite ease-in-out' }} />
-              </div>
-
-              <div style={{ textAlign: 'center', maxWidth: '520px', width: '100%', display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                <h3 style={{ fontSize: '18px', fontWeight: 600, color: '#fff' }} className="glow-text-primary">
-                  Auditing Document Comparison
-                </h3>
+              <div style={{ maxWidth: '860px', width: '100%', display: 'grid', gridTemplateColumns: '1fr 1.2fr', gap: '32px', alignItems: 'start' }}>
                 
-                {/* Stepper progress list */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', textAlign: 'left', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', padding: '16px', borderRadius: '12px' }}>
-                  {[
-                    "Staging documents in workspace storage...",
-                    "Uploading files to Gemini Secure Gateway...",
-                    "Performing multimodal structural layout audit...",
-                    "Scanning clause differences & textual modifications...",
-                    "Synthesizing results and formulating JSON audit..."
-                  ].map((step, idx) => {
-                    const isDone = loadingStep > idx;
-                    const isActive = loadingStep === idx;
-                    
-                    return (
-                      <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '12px', opacity: isDone ? 1 : isActive ? 1 : 0.4, transition: 'opacity 0.3s' }}>
-                        {isDone ? (
-                          <div style={{ width: '18px', height: '18px', borderRadius: '50%', background: 'hsl(var(--success))', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: '10px', fontWeight: 'bold' }}>✓</div>
-                        ) : isActive ? (
-                          <RefreshCw size={14} className="spin" style={{ animation: 'spin 2s linear infinite', color: 'hsl(var(--primary-glow))' }} />
-                        ) : (
-                          <div style={{ width: '18px', height: '18px', borderRadius: '50%', border: '2px solid hsla(224, 71%, 20%, 0.6)', background: 'transparent' }}></div>
-                        )}
-                        <span style={{ fontSize: '13px', color: isActive ? '#fff' : 'hsl(var(--text-muted))', fontWeight: isActive ? 600 : 400 }}>{step}</span>
-                      </div>
-                    );
-                  })}
+                {/* Left Column: Progress status & Checklist */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                    {/* Spinner ring */}
+                    <div style={{ position: 'relative', width: '50px', height: '50px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                      <div style={{ position: 'absolute', inset: 0, border: '3px solid hsla(263, 90%, 50%, 0.15)', borderRadius: '50%' }}></div>
+                      <div style={{ position: 'absolute', inset: 0, border: '3px solid transparent', borderTopColor: 'hsl(var(--primary-glow))', borderRightColor: 'hsl(var(--secondary))', borderRadius: '50%', animation: 'spin 1.2s cubic-bezier(0.5, 0, 0.5, 1) infinite' }}></div>
+                      <Sparkles size={16} style={{ color: 'hsl(var(--primary-glow))' }} />
+                    </div>
+                    <div style={{ textAlign: 'left' }}>
+                      <h3 style={{ fontSize: '18px', fontWeight: 600, color: '#fff', margin: 0 }} className="glow-text-primary">
+                        Auditing Comparison
+                      </h3>
+                      <p style={{ fontSize: '12px', color: 'hsl(var(--text-muted))', margin: '4px 0 0 0' }}>Gemini AI Agent is auditing your documents</p>
+                    </div>
+                  </div>
+
+                  {/* Stepper progress list */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', textAlign: 'left', background: 'hsla(224, 71%, 8%, 0.5)', border: '1px solid hsla(224, 71%, 20%, 0.35)', padding: '20px', borderRadius: '12px' }}>
+                    {[
+                      "Staging documents in workspace storage...",
+                      "Uploading files to Gemini Secure Gateway...",
+                      "Performing multimodal structural layout audit...",
+                      "Scanning clause differences & textual modifications...",
+                      "Synthesizing results and formulating JSON audit..."
+                    ].map((step, idx) => {
+                      const isDone = loadingStep > idx;
+                      const isActive = loadingStep === idx;
+                      
+                      return (
+                        <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '12px', opacity: isDone ? 1 : isActive ? 1 : 0.4, transition: 'opacity 0.3s' }}>
+                          {isDone ? (
+                            <div style={{ width: '18px', height: '18px', borderRadius: '50%', background: 'hsl(var(--success))', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: '10px', fontWeight: 'bold', flexShrink: 0 }}>✓</div>
+                          ) : isActive ? (
+                            <RefreshCw size={14} className="spin" style={{ animation: 'spin 2s linear infinite', color: 'hsl(var(--primary-glow))', transformOrigin: 'center', display: 'inline-block', flexShrink: 0 }} />
+                          ) : (
+                            <RefreshCw size={14} style={{ color: 'hsla(224, 71%, 20%, 0.6)', display: 'inline-block', flexShrink: 0 }} />
+                          )}
+                          <span style={{ fontSize: '13px', color: isActive ? '#fff' : 'hsl(var(--text-muted))', fontWeight: isActive ? 600 : 400 }}>{step}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
 
-                {/* Live Agent Reasoning console */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', textAlign: 'left', width: '100%' }}>
-                  <div style={{ fontSize: '11px', textTransform: 'uppercase', color: 'hsl(var(--secondary))', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <Sparkles size={12} className="spin" style={{ animation: 'spin 2s linear infinite' }} /> Live Agent Reasoning
+                {/* Right Column: Live Agent Reasoning console */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', textAlign: 'left', width: '100%' }}>
+                  <div style={{ fontSize: '12px', textTransform: 'uppercase', color: 'hsl(var(--secondary))', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <Sparkles size={14} className="spin" style={{ animation: 'spin 2s linear infinite', transformOrigin: 'center', display: 'inline-block' }} /> Live Agent Reasoning
                   </div>
-                  <div style={{ 
-                    fontFamily: 'monospace', 
-                    fontSize: '11px', 
-                    background: 'rgba(0, 0, 0, 0.45)', 
-                    border: '1px solid hsla(190, 90%, 50%, 0.15)', 
-                    padding: '12px', 
-                    borderRadius: '8px', 
-                    color: 'hsl(190, 90%, 80%)', 
-                    height: '140px', 
-                    overflowY: 'auto', 
-                    whiteSpace: 'pre-wrap',
-                    boxShadow: 'inset 0 0 10px rgba(0,0,0,0.5)',
-                    lineHeight: 1.4
-                  }}>
+                  <div 
+                    ref={thinkingConsoleRef}
+                    style={{ 
+                      fontFamily: 'monospace', 
+                      fontSize: '12px', 
+                      background: 'rgba(0, 0, 0, 0.45)', 
+                      border: '1px solid hsla(190, 90%, 50%, 0.15)', 
+                      padding: '16px', 
+                      borderRadius: '12px', 
+                      color: 'hsl(190, 90%, 80%)', 
+                      height: '350px', 
+                      overflowY: 'auto', 
+                      whiteSpace: 'pre-wrap',
+                      boxShadow: 'inset 0 0 15px rgba(0,0,0,0.6)',
+                      lineHeight: 1.5
+                    }}
+                  >
                     {thinkingText || "Waiting for model reasoning logs to stream..."}
                   </div>
                 </div>
+
               </div>
             </div>
           )}
@@ -953,20 +989,40 @@ export default function App() {
                     ) : (
                       report.tableChanges.map((change, index) => (
                         <div key={index} className="glass-card" style={{ padding: '16px', borderLeft: `4px solid ${getSeverityColor(change.severity)}` }}>
-                          <div style={{ display: 'flex', justifyItems: 'space-between', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                          <div style={{ display: 'flex', justifyItems: 'space-between', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
                             <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                               <span style={{ fontSize: '12px', padding: '3px 8px', borderRadius: '4px', background: 'hsla(224, 71%, 15%, 0.6)', fontWeight: 600 }}>Page {change.page}</span>
                               <span style={{ fontSize: '13px', fontWeight: 600, color: 'hsl(var(--secondary))' }}>{change.tableName}</span>
+                              <span style={{ fontSize: '11px', textTransform: 'uppercase', fontWeight: 600, color: 'hsl(var(--text-muted))' }}>
+                                ({change.type.replace('_', ' ')})
+                              </span>
                             </div>
                             <span style={{ fontSize: '10px', textTransform: 'uppercase', color: getSeverityColor(change.severity), fontWeight: 700 }}>{change.severity} risk</span>
                           </div>
                           
-                          <div style={{ fontSize: '13px', color: 'hsl(var(--text-primary))', marginTop: '6px' }}>
-                            <strong>Modification Type:</strong> <span style={{ fontFamily: 'monospace', background: 'rgba(255,255,255,0.05)', padding: '2px 6px', borderRadius: '4px' }}>{change.type}</span>
+                          <p style={{ fontSize: '13px', fontWeight: 600, marginBottom: '12px' }}>{change.description}</p>
+                          
+                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', fontSize: '12px' }}>
+                            {/* Before (Original) */}
+                            <div style={{ padding: '10px', background: !change.originalText ? 'transparent' : 'rgba(239, 68, 68, 0.08)', border: !change.originalText ? '1px dashed hsla(224, 71%, 20%, 0.6)' : '1px solid rgba(239, 68, 68, 0.2)', borderRadius: '6px', display: 'flex', flexDirection: 'column' }}>
+                              <div style={{ fontSize: '10px', textTransform: 'uppercase', color: !change.originalText ? 'hsl(var(--text-muted))' : 'rgb(239, 68, 68)', fontWeight: 600, marginBottom: '4px' }}>Before (Original Table)</div>
+                              {!change.originalText ? (
+                                <div style={{ color: 'hsl(var(--text-muted))', fontStyle: 'italic', margin: 'auto 0' }}>[No entry existed in original table]</div>
+                              ) : (
+                                <div style={{ fontFamily: 'monospace', whiteSpace: 'pre-wrap' }}>{change.originalText}</div>
+                              )}
+                            </div>
+                            
+                            {/* After (Revised) */}
+                            <div style={{ padding: '10px', background: !change.revisedText ? 'transparent' : 'rgba(34, 197, 94, 0.08)', border: !change.revisedText ? '1px dashed hsla(224, 71%, 20%, 0.6)' : '1px solid rgba(34, 197, 94, 0.2)', borderRadius: '6px', display: 'flex', flexDirection: 'column' }}>
+                              <div style={{ fontSize: '10px', textTransform: 'uppercase', color: !change.revisedText ? 'hsl(var(--text-muted))' : 'rgb(34, 197, 94)', fontWeight: 600, marginBottom: '4px' }}>After (Revised Table)</div>
+                              {!change.revisedText ? (
+                                <div style={{ color: 'hsl(var(--text-muted))', fontStyle: 'italic', margin: 'auto 0' }}>[Row/cell deleted in revised table]</div>
+                              ) : (
+                                <div style={{ fontFamily: 'monospace', whiteSpace: 'pre-wrap' }}>{change.revisedText}</div>
+                              )}
+                            </div>
                           </div>
-                          <p style={{ fontSize: '13px', color: 'hsl(var(--text-muted))', marginTop: '8px' }}>
-                            {change.description}
-                          </p>
                         </div>
                       ))
                     )}
@@ -981,7 +1037,7 @@ export default function App() {
                     ) : (
                       report.visualChanges.map((change, index) => (
                         <div key={index} className="glass-card" style={{ padding: '16px', borderLeft: `4px solid ${getSeverityColor(change.severity)}` }}>
-                          <div style={{ display: 'flex', justifyItems: 'space-between', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                          <div style={{ display: 'flex', justifyItems: 'space-between', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
                             <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                               <span style={{ fontSize: '12px', padding: '3px 8px', borderRadius: '4px', background: 'hsla(224, 71%, 15%, 0.6)', fontWeight: 600 }}>Page {change.page}</span>
                               <span style={{ fontSize: '13px', fontWeight: 600, color: 'hsl(var(--success))', textTransform: 'uppercase' }}>{change.type.replace('_', ' ')}</span>
@@ -989,9 +1045,29 @@ export default function App() {
                             <span style={{ fontSize: '10px', textTransform: 'uppercase', color: getSeverityColor(change.severity), fontWeight: 700 }}>{change.severity} risk</span>
                           </div>
                           
-                          <p style={{ fontSize: '13px', color: 'hsl(var(--text-primary))', marginTop: '8px' }}>
-                            {change.description}
-                          </p>
+                          <p style={{ fontSize: '13px', fontWeight: 600, marginBottom: '12px' }}>{change.description}</p>
+                          
+                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', fontSize: '12px' }}>
+                            {/* Before (Original) */}
+                            <div style={{ padding: '10px', background: !change.originalText ? 'transparent' : 'rgba(239, 68, 68, 0.08)', border: !change.originalText ? '1px dashed hsla(224, 71%, 20%, 0.6)' : '1px solid rgba(239, 68, 68, 0.2)', borderRadius: '6px', display: 'flex', flexDirection: 'column' }}>
+                              <div style={{ fontSize: '10px', textTransform: 'uppercase', color: !change.originalText ? 'hsl(var(--text-muted))' : 'rgb(239, 68, 68)', fontWeight: 600, marginBottom: '4px' }}>Before (Original Visual Layout)</div>
+                              {!change.originalText ? (
+                                <div style={{ color: 'hsl(var(--text-muted))', fontStyle: 'italic', margin: 'auto 0' }}>[No visual element in original layout]</div>
+                              ) : (
+                                <div style={{ fontFamily: 'monospace', whiteSpace: 'pre-wrap' }}>{change.originalText}</div>
+                              )}
+                            </div>
+                            
+                            {/* After (Revised) */}
+                            <div style={{ padding: '10px', background: !change.revisedText ? 'transparent' : 'rgba(34, 197, 94, 0.08)', border: !change.revisedText ? '1px dashed hsla(224, 71%, 20%, 0.6)' : '1px solid rgba(34, 197, 94, 0.2)', borderRadius: '6px', display: 'flex', flexDirection: 'column' }}>
+                              <div style={{ fontSize: '10px', textTransform: 'uppercase', color: !change.revisedText ? 'hsl(var(--text-muted))' : 'rgb(34, 197, 94)', fontWeight: 600, marginBottom: '4px' }}>After (Revised Visual Layout)</div>
+                              {!change.revisedText ? (
+                                <div style={{ color: 'hsl(var(--text-muted))', fontStyle: 'italic', margin: 'auto 0' }}>[Visual element deleted in revised layout]</div>
+                              ) : (
+                                <div style={{ fontFamily: 'monospace', whiteSpace: 'pre-wrap' }}>{change.revisedText}</div>
+                              )}
+                            </div>
+                          </div>
                         </div>
                       ))
                     )}
