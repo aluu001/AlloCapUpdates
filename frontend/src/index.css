@@ -1,0 +1,195 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap');
+
+:root {
+  font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+
+  color-scheme: dark;
+  color: #f8fafc;
+  background-color: #030712;
+
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+
+  /* Color Palette - HSL values */
+  --bg-main: 224 71% 4%;
+  --bg-card: 224 71% 8%;
+  --border-glow: 263 90% 60%;
+  --primary: 263 90% 50%;
+  --primary-glow: 263 90% 60%;
+  --secondary: 190 90% 50%;
+  --success: 142 76% 45%;
+  --warning: 38 92% 50%;
+  --danger: 0 84% 60%;
+  --text-muted: 215 20% 65%;
+  --text-primary: 210 40% 98%;
+
+  /* Layout Variables */
+  --border-radius: 16px;
+  --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: radial-gradient(circle at 50% 0%, hsl(263 50% 15%) 0%, hsl(224 71% 4%) 70%);
+  background-attachment: fixed;
+  overflow-x: hidden;
+  color: hsl(var(--text-primary));
+}
+
+/* Glassmorphism Styles */
+.glass-container {
+  background: hsla(224, 71%, 6%, 0.4);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid hsla(224, 71%, 20%, 0.3);
+  border-radius: var(--border-radius);
+}
+
+.glass-card {
+  background: hsla(224, 71%, 8%, 0.55);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid hsla(224, 71%, 20%, 0.35);
+  border-radius: var(--border-radius);
+  transition: var(--transition-smooth);
+}
+
+.glass-card:hover {
+  border-color: hsla(var(--border-glow), 0.4);
+  box-shadow: 0 0 25px hsla(var(--border-glow), 0.15);
+  transform: translateY(-2px);
+}
+
+/* Custom Scrollbars */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: hsla(224, 71%, 4%, 0.3);
+}
+
+::-webkit-scrollbar-thumb {
+  background: hsla(224, 71%, 20%, 0.6);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: hsla(var(--primary), 0.6);
+}
+
+/* Animations */
+@keyframes pulse-glow {
+  0%, 100% {
+    opacity: 0.6;
+    box-shadow: 0 0 15px hsla(var(--border-glow), 0.2);
+  }
+  50% {
+    opacity: 1;
+    box-shadow: 0 0 30px hsla(var(--border-glow), 0.45);
+  }
+}
+
+.pulsing-glow {
+  animation: pulse-glow 2s infinite ease-in-out;
+}
+
+/* Glow effects */
+.glow-text-primary {
+  text-shadow: 0 0 10px hsla(var(--primary), 0.5);
+}
+
+.glow-text-secondary {
+  text-shadow: 0 0 10px hsla(var(--secondary), 0.5);
+}
+
+/* Typography styles */
+h1, h2, h3, h4, h5 {
+  font-family: 'Outfit', sans-serif;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+/* Utility buttons */
+.btn-primary {
+  background: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--primary-glow)) 100%);
+  color: #fff;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 12px;
+  font-family: 'Outfit', sans-serif;
+  font-weight: 500;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  box-shadow: 0 4px 15px hsla(var(--primary), 0.3);
+  transition: var(--transition-smooth);
+}
+
+.btn-primary:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px hsla(var(--primary), 0.5);
+  filter: brightness(1.1);
+}
+
+.btn-primary:active {
+  transform: translateY(0);
+}
+
+.btn-primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.btn-secondary {
+  background: hsla(224, 71%, 15%, 0.4);
+  border: 1px solid hsla(224, 71%, 30%, 0.4);
+  color: hsl(var(--text-primary));
+  padding: 12px 24px;
+  border-radius: 12px;
+  font-family: 'Outfit', sans-serif;
+  font-weight: 500;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  transition: var(--transition-smooth);
+}
+
+.btn-secondary:hover {
+  background: hsla(224, 71%, 20%, 0.6);
+  border-color: hsla(var(--border-glow), 0.4);
+}
+
+/* Dashboard Layout */
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: 320px 1fr;
+  gap: 24px;
+  max-width: 1600px;
+  margin: 0 auto;
+  padding: 24px;
+  height: calc(100vh - 80px);
+}
+
+@media (max-width: 1024px) {
+  .dashboard-grid {
+    grid-template-columns: 1fr;
+    height: auto;
+  }
+}

@@ -1,0 +1,186 @@
+import { ai } from './config';
+import { Type } from '@google/genai';
+
+const GEMINI_MODEL = 'gemini-3.5-flash';
+
+// Define the JSON schema for the comparison report
+const comparisonSchema = {
+  type: Type.OBJECT,
+  properties: {
+    overallSummary: {
+      type: Type.STRING,
+      description: 'An executive summary of the overall changes between the two documents.'
+    },
+    riskRating: {
+      type: Type.STRING,
+      description: 'Risk assessment of the changes: low, medium, or high.'
+    },
+    textChanges: {
+      type: Type.ARRAY,
+      description: 'Detailed list of content and text changes.',
+      items: {
+        type: Type.OBJECT,
+        properties: {
+          page: { type: Type.STRING, description: 'Page number where the change was found.' },
+          type: { type: Type.STRING, description: 'Type of change (e.g., added, modified, deleted).' },
+          description: { type: Type.STRING, description: 'Detailed explanation of the change.' },
+          originalText: { type: Type.STRING, description: 'Original text or clause (if applicable).' },
+          revisedText: { type: Type.STRING, description: 'Revised text or clause (if applicable).' },
+          severity: { type: Type.STRING, description: 'Severity of the change (low, medium, high).' }
+        },
+        required: ['page', 'type', 'description', 'severity']
+      }
+    },
+    tableChanges: {
+      type: Type.ARRAY,
+      description: 'Detailed list of structural or value changes in tables.',
+      items: {
+        type: Type.OBJECT,
+        properties: {
+          page: { type: Type.STRING, description: 'Page number where the table is located.' },
+          tableName: { type: Type.STRING, description: 'Name or description of the table.' },
+          type: { type: Type.STRING, description: 'Type of change (e.g., row_added, value_modified, structure_altered).' },
+          description: { type: Type.STRING, description: 'Detailed explanation of table changes.' },
+          severity: { type: Type.STRING, description: 'Severity of the change (low, medium, high).' }
+        },
+        required: ['page', 'tableName', 'type', 'description', 'severity']
+      }
+    },
+    visualChanges: {
+      type: Type.ARRAY,
+      description: 'Detailed list of visual changes, including charts, logos, diagrams, or structural layout shifts.',
+      items: {
+        type: Type.OBJECT,
+        properties: {
+          page: { type: Type.STRING, description: 'Page number where the visual element is located.' },
+          type: { type: Type.STRING, description: 'Type of change (e.g., logo_replaced, diagram_updated, layout_shifted).' },
+          description: { type: Type.STRING, description: 'Detailed explanation of visual changes.' },
+          severity: { type: Type.STRING, description: 'Severity of the change (low, medium, high).' }
+        },
+        required: ['page', 'type', 'description', 'severity']
+      }
+    }
+  },
+  required: ['overallSummary', 'riskRating', 'textChanges', 'tableChanges', 'visualChanges']
+};
+
+/**
+ * Polls the Gemini Files API until the uploaded file state is ACTIVE.
+ */
+async function waitForFileActive(fileName: string, onProgress?: (msg: string) => void): Promise<void> {
+  const maxRetries = 30; // 60 seconds max
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    const file = await ai.files.get({ name: fileName });
+    if (file.state === 'ACTIVE') {
+      return;
+    }
+    if (file.state === 'FAILED') {
+      throw new Error(`File processing failed on Gemini servers: ${fileName}`);
+    }
+    if (onProgress) {
+      onProgress(`Processing file on Gemini servers (attempt ${attempt + 1}/${maxRetries}, status: ${file.state})...`);
+    }
+    await new Promise((resolve) => setTimeout(resolve, 2000));
+  }
+  throw new Error(`Timeout waiting for file ${fileName} to be processed.`);
+}
+
+/**
+ * Compares two uploaded documents using Gemini 3.5 Flash and returns a structured JSON report.
+ */
+export async function compareDocuments(
+  fileAPath: string,
+  fileBPath: string,
+  fileAName: string,
+  fileBName: string,
+  onProgress?: (msg: string) => void
+) {
+  let fileARef: any = null;
+  let fileBRef: any = null;
+
+  try {
+    // 1. Upload original document
+    if (onProgress) onProgress(`Uploading Original Document (${fileAName}) to Gemini Files API...`);
+    fileARef = await ai.files.upload({
+      file: fileAPath,
+      config: {
+        mimeType: 'application/pdf',
+        displayName: `Original_${fileAName}`
+      }
+    });
+
+    // 2. Upload revised document
+    if (onProgress) onProgress(`Uploading Revised Document (${fileBName}) to Gemini Files API...`);
+    fileBRef = await ai.files.upload({
+      file: fileBPath,
+      config: {
+        mimeType: 'application/pdf',
+        displayName: `Revised_${fileBName}`
+      }
+    });
+
+    // 3. Wait for both files to become ACTIVE
+    if (onProgress) onProgress('Waiting for Original Document to process...');
+    await waitForFileActive(fileARef.name, onProgress);
+
+    if (onProgress) onProgress('Waiting for Revised Document to process...');
+    await waitForFileActive(fileBRef.name, onProgress);
+
+    // 4. Generate comparison content
+    if (onProgress) onProgress('Comparing documents textually and visually using Gemini 3.5 Flash...');
+    const response = await ai.models.generateContent({
+      model: GEMINI_MODEL,
+      contents: [
+        {
+          role: 'user',
+          parts: [
+            {
+              text: `You are an expert document auditor. Compare the following two documents in detail.
+              Document A is the Original document (name: "${fileAName}").
+              Document B is the Revised document (name: "${fileBName}").
+              
+              Perform a highly detailed comparison and identify every difference:
+              1. **Text Content**: Identify modifications, deletions, and additions in the text. Look for changes in names, definitions, percentages, dates, and clauses.
+              2. **Tables**: Identify any changes in tables (structure, new rows, new columns, value updates).
+              3. **Visuals & Layout**: Identify any changes in images, charts, flowchart diagrams, headers/footers, or layout styles.
+              
+              Generate a structured JSON output according to the requested schema.`
+            },
+            { fileData: { fileUri: fileARef.uri, mimeType: fileARef.mimeType } },
+            { fileData: { fileUri: fileBRef.uri, mimeType: fileBRef.mimeType } }
+          ]
+        }
+      ],
+      config: {
+        responseMimeType: 'application/json',
+        responseJsonSchema: comparisonSchema,
+        temperature: 0.1 // Keep it low for factual and deterministic extraction
+      }
+    });
+
+    if (onProgress) onProgress('Parsing comparison results...');
+    const responseText = response.text;
+    if (!responseText) {
+      throw new Error('Gemini returned an empty response.');
+    }
+
+    return JSON.parse(responseText);
+
+  } finally {
+    // 5. Cleanup files from Gemini storage
+    const cleanupPromises: Promise<any>[] = [];
+    if (fileARef?.name) {
+      if (onProgress) onProgress(`Cleaning up original file from Gemini storage...`);
+      cleanupPromises.push(ai.files.delete({ name: fileARef.name }).catch(err => {
+        console.error(`Failed to delete temporary file ${fileARef.name}:`, err);
+      }));
+    }
+    if (fileBRef?.name) {
+      if (onProgress) onProgress(`Cleaning up revised file from Gemini storage...`);
+      cleanupPromises.push(ai.files.delete({ name: fileBRef.name }).catch(err => {
+        console.error(`Failed to delete temporary file ${fileBRef.name}:`, err);
+      }));
+    }
+    await Promise.all(cleanupPromises);
+  }
+}
