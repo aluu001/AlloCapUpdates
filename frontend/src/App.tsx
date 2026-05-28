@@ -13,7 +13,6 @@ import {
   LayoutGrid,
   Table,
   Layers,
-  Sparkles,
   Trash2
 } from 'lucide-react';
 
@@ -159,6 +158,7 @@ export default function App() {
   const [thinkingText, setThinkingText] = useState('');
 
   // Chat State
+  const [isStorageOpen, setIsStorageOpen] = useState(false);
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [chatInput, setChatInput] = useState('');
@@ -177,9 +177,9 @@ export default function App() {
   const renderFormattedThinking = (text: string) => {
     if (!text.trim()) {
       return (
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'hsl(var(--text-muted))', fontStyle: 'italic', fontSize: '13px' }}>
-          <RefreshCw size={12} className="spin" style={{ animation: 'spin 2s linear infinite', transformOrigin: 'center', display: 'inline-block' }} />
-          <span>Waiting for agent reasoning logs to stream...</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#64748b', fontStyle: 'italic', fontSize: '13px' }}>
+          <RefreshCw size={12} className="spin" style={{ animation: 'spin 2s linear infinite', transformOrigin: 'center', display: 'inline-block', color: '#007E9E' }} />
+          <span>Waiting for comparison analysis to stream...</span>
         </div>
       );
     }
@@ -493,21 +493,21 @@ export default function App() {
       setThinkingText('');
       
       const steps = [
-        "Uploading Original File to virtual repository...",
-        "Uploading Revised File to virtual repository...",
-        "Identifying document sections and layouts...",
-        "Comparing clauses, definitions, and formatting...",
-        "Generating visual change summary...",
-        "Structuring differences into JSON format..."
+        "Initializing Original Document...",
+        "Initializing Revised Document...",
+        "Analyzing document layout...",
+        "Comparing text and clauses...",
+        "Analyzing visual modifications...",
+        "Generating comparison report..."
       ];
 
       const thinkingQuotes = [
         "Analyzing Document A: Apex Lease Agreement v1...\n- Detected 6 distinct pages\n- Identified Table 'Utility Responsibilities' on page 3.\n\n",
         "Analyzing Document B: revised_lease_v2_signed...\n- Detected 6 distinct pages\n- Layout is slightly more compact; margins decreased to 0.75 in.\n\n",
-        "Starting visual audit (Multimodal comparison mode):\n- Comparing logo headers on Page 1... Brand changed to 'Aegis Property Management Group'.\n- Comparing signatures on page 5... block has shifted to bottom of page 4 due to margin changes.\n\n",
-        "Scanning text & clauses verbatim:\n- Page 1 clause 1.4: Security deposit changed from $2,000 to $2,300. (Calculated delta: +$300)\n- Page 2 clause 2.1: Grace period reduced from 5 days to 3 days.\n- Page 5: Pet policy lease rider has been deleted completely.\n- Page 6: New parking indemnification clause found in Revised file.\n\n",
-        "Auditing table cells page 3:\n- Row 2 'Electricity': landlord obligation has changed to tenant obligation.\n- Row 5 'Fiber Internet': new row added with fee $50/mo.\n\n",
-        "Formulating final audit report in JSON..."
+        "Starting layout comparison:\n- Comparing headers on Page 1... Brand changed to 'Aegis Property Management Group'.\n- Comparing signatures on page 5... block has shifted to bottom of page 4 due to margin changes.\n\n",
+        "Scanning text and clauses:\n- Page 1 clause 1.4: Security deposit changed from $2,000 to $2,300. (Calculated delta: +$300)\n- Page 2 clause 2.1: Grace period reduced from 5 days to 3 days.\n- Page 5: Pet policy lease rider has been deleted completely.\n- Page 6: New parking indemnification clause found in Revised file.\n\n",
+        "Analyzing table details on Page 3:\n- Row 2 'Electricity': landlord obligation has changed to tenant obligation.\n- Row 5 'Fiber Internet': new row added with fee $50/mo.\n\n",
+        "Compiling final comparison report..."
       ];
 
       // We run both stepper and typing streams together
@@ -524,7 +524,7 @@ export default function App() {
 
       setReport(mockReport);
       setChatMessages([
-        { role: 'agent', content: "Hello! I am your Comparison Agent. I have successfully analyzed the differences between your two documents. Ask me anything about the changes!" }
+        { role: 'agent', content: "Hello! I have completed a detailed analysis between the select documents. Ask me anything about the changes!" }
       ]);
       setIsLoading(false);
       setActiveTab('summary');
@@ -586,7 +586,7 @@ export default function App() {
                 alert(data.error || "Comparison failed");
               }
             } else if (data.type === 'error') {
-              alert(`Agent Comparison Error: ${data.error}`);
+              alert(`Comparison Error: ${data.error}`);
             }
           } catch (err) {
             console.error("JSON parse error on stream line", err, line);
@@ -671,737 +671,833 @@ export default function App() {
   };
 
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', background: '#f0f2f3', color: '#323639' }}>
       
       {/* Header Bar */}
-      <header className="glass-container" style={{ margin: '16px 24px 0', padding: '16px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <div style={{ background: 'linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--secondary)) 100%)', width: '40px', height: '40px', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 0 15px hsla(var(--primary) / 0.4)' }}>
-            <Sparkles size={22} color="#fff" />
-          </div>
-          <div>
-            <h1 style={{ fontSize: '20px', fontWeight: 700, background: 'linear-gradient(90deg, #fff 0%, hsl(var(--text-muted)) 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-              AlloCapUpdates
-            </h1>
-            <p style={{ fontSize: '12px', color: 'hsl(var(--text-muted))' }}>AI Agent Document Comparison</p>
-          </div>
+      <header className="glass-container" style={{ padding: '8px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', height: '55px', zIndex: 30 }}>
+        {/* Left: AlloCAP Logo */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <svg width="150" height="35" viewBox="0 0 150 35" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <g transform="translate(0, 2)">
+              <path d="M4 28V10C4 8.89543 4.89543 8 6 8H9C10.1046 8 11 8.89543 11 10V28" stroke="#21874c" strokeWidth="2.5" strokeLinecap="round" />
+              <path d="M11 28V6C11 4.89543 11.8954 4 13 4H16C17.1046 4 18 4.89543 18 6V28" stroke="#015294" strokeWidth="2.5" strokeLinecap="round" />
+              <path d="M18 28V14C18 12.8954 18.8954 12 20 12H23C24.1046 12 25 12.8954 25 14V28" stroke="#21874c" strokeWidth="2.5" strokeLinecap="round" />
+              <path d="M2 30H27" stroke="#015294" strokeWidth="2" strokeLinecap="round" />
+            </g>
+            <text x="34" y="24" fill="#015294" fontFamily="'Raleway', sans-serif" fontSize="18" fontWeight="800">Allo</text>
+            <text x="72" y="24" fill="#21874c" fontFamily="'Raleway', sans-serif" fontSize="18" fontWeight="800">CAP</text>
+            <text x="114" y="16" fill="#21874c" fontFamily="'Raleway', sans-serif" fontSize="6" fontWeight="700">TM</text>
+          </svg>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+        {/* Center: Client / Version Context */}
+        <div style={{ textAlign: 'center', flex: 1, paddingRight: '60px' }}>
+          <h2 style={{ fontSize: '14px', color: '#905F5F', fontWeight: 700, margin: 0, textTransform: 'uppercase', letterSpacing: '0.5px' }}>PCC Demo Instance</h2>
+          <p style={{ fontSize: '10px', color: '#64748b', margin: '2px 0 0', fontWeight: 500 }}>Q2 2026, Version: Audit 2.0</p>
+        </div>
+
+        {/* Right: Actions Menu */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '11px', color: '#64748b' }}>
           {!isConfigured && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'hsla(38, 92%, 50%, 0.15)', border: '1px solid hsl(38 92% 50% / 0.3)', padding: '6px 12px', borderRadius: '20px', fontSize: '12px', color: 'hsl(38 92% 50%)' }}>
-              <AlertTriangle size={14} />
-              <span>Demo Mode active (No API Key)</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '4px', background: '#fef3c7', border: '1px solid #fcd34d', padding: '3px 8px', borderRadius: '4px', color: '#d97706', marginRight: '10px' }}>
+              <AlertTriangle size={10} />
+              <span>Demo Mode</span>
             </div>
           )}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'hsla(var(--primary) / 0.15)', border: '1px solid hsla(var(--primary) / 0.3)', padding: '6px 12px', borderRadius: '20px', fontSize: '12px', color: 'hsl(var(--primary-glow))', fontWeight: 600 }}>
-            <span>Gemini 3.5 Flash</span>
-          </div>
+          <a href="#final" style={{ color: '#4b5563', textDecoration: 'none' }}>Final Version</a>
+          <span>|</span>
+          <a href="#rename" style={{ color: '#4b5563', textDecoration: 'none' }}>Rename Version</a>
+          <span>|</span>
+          <a href="#lock" style={{ color: '#4b5563', textDecoration: 'none' }}>Lock</a>
+          <span>|</span>
+          <a href="#client" style={{ color: '#4b5563', textDecoration: 'none' }}>Change Client</a>
+          <span>|</span>
+          <a href="#quarter" style={{ color: '#4b5563', textDecoration: 'none' }}>Change Quarter</a>
+          <span>|</span>
+          <a href="#logout" style={{ color: '#905F5F', textDecoration: 'none', fontWeight: 600 }}>Log Out</a>
         </div>
       </header>
 
       {/* Main Workspace */}
       <main className="dashboard-grid">
         
-        {/* Sidebar Panel - Storage & Uploads */}
-        <section className="glass-card" style={{ display: 'flex', flexDirection: 'column', gap: '20px', padding: '20px', height: '100%', overflowY: 'auto' }}>
-          <div>
-            <h2 style={{ fontSize: '18px', marginBottom: '6px' }}>Document Storage</h2>
-            <p style={{ fontSize: '12px', color: 'hsl(var(--text-muted))' }}>Upload and select documents to compare.</p>
-          </div>
-
-          {/* Upload Drop Zone */}
-          <div 
-            style={{ 
-              border: '2px dashed hsla(224, 71%, 20%, 0.6)', 
-              borderRadius: '12px', 
-              padding: '24px 16px', 
-              textAlign: 'center',
-              cursor: 'pointer',
-              background: 'hsla(224, 71%, 4%, 0.3)',
-              transition: 'var(--transition-smooth)'
-            }}
-            onMouseEnter={(e) => e.currentTarget.style.borderColor = 'hsl(var(--primary))'}
-            onMouseLeave={(e) => e.currentTarget.style.borderColor = 'hsla(224, 71%, 20%, 0.6)'}
-            onClick={() => fileInputRef.current?.click()}
-          >
-            <input 
-              type="file" 
-              ref={fileInputRef} 
-              style={{ display: 'none' }} 
-              accept=".pdf"
-              onChange={handleFileUpload} 
-            />
-            {uploading ? (
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
-                <RefreshCw size={24} className="pulsing-glow" style={{ animation: 'spin 2s linear infinite', color: 'hsl(var(--primary))' }} />
-                <span style={{ fontSize: '13px' }}>Uploading to storage...</span>
-              </div>
-            ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
-                <Upload size={24} style={{ color: 'hsl(var(--text-muted))' }} />
-                <span style={{ fontSize: '13px', fontWeight: 500 }}>Upload PDF Document</span>
-                <span style={{ fontSize: '10px', color: 'hsl(var(--text-muted))' }}>Up to 50MB</span>
-              </div>
-            )}
-          </div>
-          {uploadError && (
-            <p style={{ color: 'hsl(var(--danger))', fontSize: '11px', marginTop: '-10px', textAlign: 'center' }}>{uploadError}</p>
-          )}
-
-          {/* File Lists */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', flex: 1, overflowY: 'auto' }}>
-            <h3 style={{ fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.05em', color: 'hsl(var(--text-muted))' }}>Uploaded Files ({files.length})</h3>
+        {/* Left Navigation Sidebar */}
+        <aside className="app-sidebar">
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1px', padding: '12px 0' }}>
             
-            {files.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: '30px 10px', color: 'hsl(var(--text-muted))', fontSize: '13px' }}>
-                No files uploaded yet.
-              </div>
-            ) : (
-              files.map(file => {
-                const isSelectedA = fileA === file.filename;
-                const isSelectedB = fileB === file.filename;
-                
-                return (
-                  <div 
-                    key={file.filename} 
-                    className="glass-card" 
-                    style={{ 
-                      padding: '8px 12px', 
-                      borderRadius: '8px', 
-                      display: 'flex', 
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      gap: '10px',
-                      background: isSelectedA ? 'hsla(250, 95%, 62%, 0.08)' : isSelectedB ? 'hsla(185, 95%, 48%, 0.08)' : 'hsla(224, 47%, 10%, 0.45)',
-                      borderColor: isSelectedA ? 'hsl(250 95% 62% / 0.45)' : isSelectedB ? 'hsl(185 95% 48% / 0.45)' : 'hsla(224, 47%, 25%, 0.2)',
-                      boxShadow: isSelectedA ? '0 0 10px hsla(250, 95%, 62%, 0.15)' : isSelectedB ? '0 0 10px hsla(185, 95%, 48%, 0.15)' : 'none',
-                      transition: 'all 0.2s ease'
-                    }}
-                  >
-                    {/* Left: Icon and Name/Size */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', overflow: 'hidden', flex: 1 }}>
-                      <FileText size={15} style={{ color: isSelectedA ? 'hsl(250, 95%, 62%)' : isSelectedB ? 'hsl(185, 95%, 48%)' : 'hsl(var(--text-muted))', flexShrink: 0 }} />
-                      <div style={{ overflow: 'hidden', display: 'flex', flexDirection: 'column', textAlign: 'left' }}>
-                        <span style={{ fontSize: '12.5px', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: isSelectedA || isSelectedB ? '#fff' : 'hsl(var(--text-primary))' }} title={file.displayName}>
-                          {file.displayName}
-                        </span>
-                        <span style={{ fontSize: '10px', color: 'hsl(var(--text-muted))' }}>{formatBytes(file.size)}</span>
-                      </div>
-                    </div>
-
-                    {/* Right: Select A, Select B, Download, Delete actions */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
-                      
-                      {/* Select A Button */}
-                      <button
-                        onClick={() => {
-                          setFileA(isSelectedA ? null : file.filename);
-                          if (isSelectedB) setFileB(null); // prevent selecting same file for both
-                        }}
-                        style={{
-                          width: '22px',
-                          height: '22px',
-                          borderRadius: '50%',
-                          fontSize: '10px',
-                          fontWeight: 700,
-                          cursor: 'pointer',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          border: isSelectedA ? 'none' : '1px solid hsla(250, 95%, 62%, 0.4)',
-                          background: isSelectedA ? 'hsl(250, 95%, 62%)' : 'transparent',
-                          color: isSelectedA ? '#fff' : 'hsl(250, 95%, 72%)',
-                          transition: 'all 0.2s'
-                        }}
-                        title={isSelectedA ? "Unselect Original" : "Set as Original (A)"}
-                      >
-                        A
-                      </button>
-
-                      {/* Select B Button */}
-                      <button
-                        onClick={() => {
-                          setFileB(isSelectedB ? null : file.filename);
-                          if (isSelectedA) setFileA(null); // prevent selecting same file for both
-                        }}
-                        style={{
-                          width: '22px',
-                          height: '22px',
-                          borderRadius: '50%',
-                          fontSize: '10px',
-                          fontWeight: 700,
-                          cursor: 'pointer',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          border: isSelectedB ? 'none' : '1px solid hsla(185, 95%, 48%, 0.4)',
-                          background: isSelectedB ? 'hsl(185, 95%, 48%)' : 'transparent',
-                          color: isSelectedB ? '#000' : 'hsl(185, 95%, 48%)',
-                          transition: 'all 0.2s'
-                        }}
-                        title={isSelectedB ? "Unselect Revised" : "Set as Revised (B)"}
-                      >
-                        B
-                      </button>
-
-                      {/* Download */}
-                      <a 
-                        href={`${API_BASE}/download/${file.filename}`}
-                        style={{ 
-                          width: '22px',
-                          height: '22px',
-                          borderRadius: '50%',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          background: 'rgba(255,255,255,0.03)',
-                          border: '1px solid rgba(255,255,255,0.08)',
-                          color: 'hsl(var(--text-muted))',
-                          transition: 'all 0.2s',
-                          cursor: 'pointer'
-                        }}
-                        title="Download original document"
-                      >
-                        <Download size={11} />
-                      </a>
-
-                      {/* Delete */}
-                      <button
-                        onClick={async (e) => {
-                          e.stopPropagation();
-                          if (confirm(`Are you sure you want to delete ${file.displayName}?`)) {
-                            await handleDeleteFile(file.filename);
-                          }
-                        }}
-                        style={{
-                          width: '22px',
-                          height: '22px',
-                          borderRadius: '50%',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          background: 'rgba(239, 68, 68, 0.05)',
-                          border: '1px solid rgba(239, 68, 68, 0.15)',
-                          color: 'rgba(239, 68, 68, 0.7)',
-                          cursor: 'pointer',
-                          transition: 'all 0.2s'
-                        }}
-                        className="delete-btn-hover"
-                        title="Delete document"
-                      >
-                        <Trash2 size={11} />
-                      </button>
-
-                    </div>
-                  </div>
-                );
-              })
-            )}
+            <button className="nav-menu-item">
+              <span style={{ fontSize: '13px' }}>🏠</span> Home
+            </button>
+            
+            <button className="nav-menu-item">
+              <span>+</span> Import Data
+            </button>
+            
+            <button className="nav-menu-item">
+              <span>+</span> Payroll Data Management
+            </button>
+            
+            <button className="nav-menu-item">
+              <span>+</span> Expenditure Data Management
+            </button>
+            
+            <button className="nav-menu-item">
+              <span>+</span> Final Grouper
+            </button>
+            
+            {/* Prepare Data - Expanded Section */}
+            <div style={{ display: 'flex', flexDirection: 'column' }}>
+              <button className="nav-menu-item" style={{ fontWeight: 700, color: '#015294', background: '#f8fafc' }}>
+                <span>−</span> Prepare Data
+              </button>
+              
+              <button className="nav-sub-item">
+                Department Types
+              </button>
+              
+              <button className="nav-sub-item">
+                Allocation Types
+              </button>
+              
+              {/* Compare Workspace - Active Item */}
+              <button className="nav-sub-item active">
+                Compare Workspace
+              </button>
+              
+              {/* Document Storage Slide Toggler */}
+              <button 
+                className="nav-sub-item" 
+                onClick={() => setIsStorageOpen(!isStorageOpen)}
+                style={{ 
+                  background: isStorageOpen ? 'rgba(0, 126, 158, 0.08)' : 'transparent',
+                  color: isStorageOpen ? '#007E9E' : '#4b5563',
+                  fontWeight: isStorageOpen ? 700 : 500
+                }}
+              >
+                📂 Document Storage {isStorageOpen ? '◀' : '▶'}
+              </button>
+              
+              <button className="nav-sub-item">
+                Allocation
+              </button>
+              
+              <button className="nav-sub-item">
+                Capped / Enhanced Funding Crosswalk
+              </button>
+            </div>
+            
+            <button className="nav-menu-item">
+              <span>+</span> Process
+            </button>
+            
+            <button className="nav-menu-item">
+              <span>+</span> Reports
+            </button>
+            
           </div>
+        </aside>
 
-          {/* Action Trigger */}
-          <button 
-            onClick={handleCompare}
-            disabled={!fileA || !fileB || isLoading}
-            className="btn-primary"
-            style={{ width: '100%', justifyContent: 'center' }}
-          >
-            {isLoading ? (
-              <>
-                <RefreshCw size={16} className="spin" style={{ animation: 'spin 2s linear infinite' }} />
-                <span>Auditing Documents...</span>
-              </>
-            ) : (
-              <>
-                <span>Compare Documents</span>
-                <ArrowRight size={16} />
-              </>
-            )}
-          </button>
-        </section>
-
-        {/* Main Content Workspace */}
-        <section className="glass-card" style={{ padding: '24px', display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden', position: 'relative' }}>
+        {/* Slide-out Storage Drawer */}
+        <div className={`storage-drawer ${isStorageOpen ? 'open' : ''}`}>
+          <div style={{ padding: '16px 20px', borderBottom: '1px solid #cbd5e1', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div>
+              <h3 style={{ fontSize: '14px', fontWeight: 700, margin: 0, color: '#203865' }}>Document Storage</h3>
+              <p style={{ fontSize: '11px', color: '#64748b', margin: '2px 0 0' }}>Upload and select documents</p>
+            </div>
+            <button 
+              onClick={() => setIsStorageOpen(false)}
+              style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748b', display: 'flex', padding: '4px' }}
+            >
+              <X size={18} />
+            </button>
+          </div>
           
-          {/* 1. Loading Screen */}
-          {isLoading && (
-            <div style={{ position: 'absolute', inset: 0, background: 'hsla(224, 71%, 4%, 0.96)', backdropFilter: 'blur(16px)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '40px', borderRadius: 'var(--border-radius)', overflowY: 'auto' }}>
-              
-              <div style={{ maxWidth: '860px', width: '100%', display: 'grid', gridTemplateColumns: '1fr 1.2fr', gap: '32px', alignItems: 'start' }}>
-                
-                {/* Left Column: Progress status & Checklist */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                    {/* Spinner ring */}
-                    <div style={{ position: 'relative', width: '50px', height: '50px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                      <div style={{ position: 'absolute', inset: 0, border: '3px solid hsla(var(--primary) / 0.15)', borderRadius: '50%' }}></div>
-                      <div style={{ position: 'absolute', inset: 0, border: '3px solid transparent', borderTopColor: 'hsl(var(--primary-glow))', borderRightColor: 'hsl(var(--secondary))', borderRadius: '50%', animation: 'spin 1.2s cubic-bezier(0.5, 0, 0.5, 1) infinite' }}></div>
-                      <Sparkles size={16} style={{ color: 'hsl(var(--primary-glow))' }} />
-                    </div>
-                    <div style={{ textAlign: 'left' }}>
-                      <h3 style={{ fontSize: '18px', fontWeight: 600, color: '#fff', margin: 0 }} className="glow-text-primary">
-                        Auditing Comparison
-                      </h3>
-                      <p style={{ fontSize: '12px', color: 'hsl(var(--text-muted))', margin: '4px 0 0 0' }}>Gemini AI Agent is auditing your documents</p>
-                    </div>
-                  </div>
-
-                  {/* Stepper progress list */}
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', textAlign: 'left', background: 'hsla(224, 71%, 8%, 0.5)', border: '1px solid hsla(224, 71%, 20%, 0.35)', padding: '20px', borderRadius: '12px' }}>
-                    {[
-                      "Staging documents in workspace storage...",
-                      "Uploading files to Gemini Secure Gateway...",
-                      "Performing multimodal structural layout audit...",
-                      "Scanning clause differences & textual modifications...",
-                      "Synthesizing results and formulating JSON audit..."
-                    ].map((step, idx) => {
-                      const isDone = loadingStep > idx;
-                      const isActive = loadingStep === idx;
-                      
-                      return (
-                        <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '12px', opacity: isDone ? 1 : isActive ? 1 : 0.4, transition: 'opacity 0.3s' }}>
-                          {isDone ? (
-                            <div style={{ width: '18px', height: '18px', borderRadius: '50%', background: 'hsl(var(--success))', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: '10px', fontWeight: 'bold', flexShrink: 0 }}>✓</div>
-                          ) : isActive ? (
-                            <RefreshCw size={14} className="spin" style={{ animation: 'spin 2s linear infinite', color: 'hsl(var(--primary-glow))', transformOrigin: 'center', display: 'inline-block', flexShrink: 0 }} />
-                          ) : (
-                            <RefreshCw size={14} style={{ color: 'hsla(224, 71%, 20%, 0.6)', display: 'inline-block', flexShrink: 0 }} />
-                          )}
-                          <span style={{ fontSize: '13px', color: isActive ? '#fff' : 'hsl(var(--text-muted))', fontWeight: isActive ? 600 : 400 }}>{step}</span>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                {/* Right Column: Live Agent Reasoning console */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', textAlign: 'left', width: '100%' }}>
-                  <div style={{ fontSize: '12px', textTransform: 'uppercase', color: 'hsl(var(--secondary))', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <Sparkles size={14} className="spin" style={{ animation: 'spin 2s linear infinite', transformOrigin: 'center', display: 'inline-block' }} /> Live Agent Reasoning
-                  </div>
-                  <div 
-                    ref={thinkingConsoleRef}
-                    style={{ 
-                      background: 'radial-gradient(circle at 100% 0%, hsla(var(--primary) / 0.06) 0%, hsla(var(--secondary) / 0.03) 50%, hsla(var(--bg-main) / 0.65) 100%)', 
-                      border: '1px solid hsla(var(--primary) / 0.25)', 
-                      padding: '20px', 
-                      borderRadius: '16px', 
-                      height: '350px', 
-                      overflowY: 'auto', 
-                      boxShadow: 'inset 0 0 20px rgba(0,0,0,0.5), 0 8px 32px rgba(0,0,0,0.4)',
-                      backdropFilter: 'blur(8px)',
-                      display: 'flex',
-                      flexDirection: 'column'
-                    }}
-                  >
-                    {renderFormattedThinking(thinkingText)}
-                  </div>
-                </div>
-
-              </div>
-            </div>
-          )}
-
-          {/* 2. Top-level Document Slot Selection (Active Configuration) */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 12px 1fr', gap: '12px', marginBottom: '20px', paddingBottom: '20px', borderBottom: '1px solid hsla(224, 47%, 25%, 0.25)', alignItems: 'center' }}>
-            {/* Slot A: Original */}
+          <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '20px', overflowY: 'auto', flex: 1 }}>
+            {/* Upload Drop Zone */}
             <div 
-              className="glass-card" 
               style={{ 
-                padding: '16px', 
-                borderStyle: fileA ? 'solid' : 'dashed', 
-                borderWidth: '1.5px',
-                borderColor: fileA ? 'hsl(var(--primary))' : 'hsla(224, 47%, 25%, 0.35)',
-                background: fileA ? 'hsla(var(--primary) / 0.05)' : 'hsla(224, 47%, 10%, 0.2)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                borderRadius: '12px',
-                gap: '12px'
+                border: '2px dashed #cbd5e1', 
+                borderRadius: '6px', 
+                padding: '20px 16px', 
+                textAlign: 'center',
+                cursor: 'pointer',
+                background: '#f8fafc',
+                transition: 'var(--transition-smooth)'
               }}
+              onMouseEnter={(e) => e.currentTarget.style.borderColor = '#015294'}
+              onMouseLeave={(e) => e.currentTarget.style.borderColor = '#cbd5e1'}
+              onClick={() => fileInputRef.current?.click()}
             >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', overflow: 'hidden' }}>
-                <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: fileA ? 'hsl(var(--primary))' : 'hsla(224, 47%, 25%, 0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                  <FileText size={16} color="#fff" />
+              <input 
+                type="file" 
+                ref={fileInputRef} 
+                style={{ display: 'none' }} 
+                accept=".pdf"
+                onChange={handleFileUpload} 
+              />
+              {uploading ? (
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
+                  <RefreshCw size={24} className="spin" style={{ color: '#015294' }} />
+                  <span style={{ fontSize: '12px', color: '#4b5563' }}>Uploading to storage...</span>
                 </div>
-                <div style={{ overflow: 'hidden' }}>
-                  <div style={{ fontSize: '11px', textTransform: 'uppercase', color: 'hsl(var(--text-muted))', fontWeight: 600 }}>Original Document (A)</div>
-                  <div style={{ fontSize: '13px', fontWeight: 500, color: fileA ? '#fff' : 'hsl(var(--text-muted))', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
-                    {fileA ? files.find(f => f.filename === fileA)?.displayName : "No file selected"}
-                  </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
+                  <Upload size={24} style={{ color: '#94a3b8' }} />
+                  <span style={{ fontSize: '13px', fontWeight: 600, color: '#334155' }}>Upload PDF Document</span>
+                  <span style={{ fontSize: '10px', color: '#64748b' }}>Up to 50MB</span>
                 </div>
-              </div>
-              {fileA && (
-                <button onClick={() => setFileA(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'hsl(var(--text-muted))', display: 'flex', padding: '4px' }} title="Clear Selection">
-                  <X size={16} />
-                </button>
               )}
             </div>
-
-            <div style={{ display: 'flex', justifyContent: 'center', color: 'hsla(224, 47%, 25%, 0.5)', fontWeight: 600, fontSize: '14px' }}>VS</div>
-
-            {/* Slot B: Revised */}
-            <div 
-              className="glass-card" 
-              style={{ 
-                padding: '16px', 
-                borderStyle: fileB ? 'solid' : 'dashed', 
-                borderWidth: '1.5px',
-                borderColor: fileB ? 'hsl(var(--secondary))' : 'hsla(224, 47%, 25%, 0.35)',
-                background: fileB ? 'hsla(var(--secondary) / 0.05)' : 'hsla(224, 47%, 10%, 0.2)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                borderRadius: '12px',
-                gap: '12px'
-              }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', overflow: 'hidden' }}>
-                <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: fileB ? 'hsl(var(--secondary))' : 'hsla(224, 47%, 25%, 0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                  <FileText size={16} color="#fff" />
+            {uploadError && (
+              <p style={{ color: '#ef4444', fontSize: '11px', marginTop: '-10px', textAlign: 'center' }}>{uploadError}</p>
+            )}
+            
+            {/* Files List */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              <h4 style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.05em', color: '#64748b', marginBottom: '4px' }}>
+                Uploaded Files ({files.length})
+              </h4>
+              
+              {files.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '35px 10px', color: '#94a3b8', fontSize: '12px', border: '1px dashed #cbd5e1', borderRadius: '6px', background: '#f8fafc' }}>
+                  No files uploaded yet.
                 </div>
-                <div style={{ overflow: 'hidden' }}>
-                  <div style={{ fontSize: '11px', textTransform: 'uppercase', color: 'hsl(var(--text-muted))', fontWeight: 600 }}>Revised Document (B)</div>
-                  <div style={{ fontSize: '13px', fontWeight: 500, color: fileB ? '#fff' : 'hsl(var(--text-muted))', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
-                    {fileB ? files.find(f => f.filename === fileB)?.displayName : "No file selected"}
-                  </div>
-                </div>
-              </div>
-              {fileB && (
-                <button onClick={() => setFileB(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'hsl(var(--text-muted))', display: 'flex', padding: '4px' }} title="Clear Selection">
-                  <X size={16} />
-                </button>
+              ) : (
+                files.map(file => {
+                  const isSelectedA = fileA === file.filename;
+                  const isSelectedB = fileB === file.filename;
+                  
+                  return (
+                    <div 
+                      key={file.filename} 
+                      className="glass-card" 
+                      style={{ 
+                        padding: '10px 12px', 
+                        borderRadius: '6px', 
+                        display: 'flex', 
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        gap: '10px',
+                        background: isSelectedA ? 'rgba(1, 82, 148, 0.04)' : isSelectedB ? 'rgba(0, 126, 158, 0.04)' : '#ffffff',
+                        borderColor: isSelectedA ? '#015294' : isSelectedB ? '#007E9E' : '#cbd5e1',
+                        boxShadow: isSelectedA ? '0 0 8px rgba(1, 82, 148, 0.1)' : isSelectedB ? '0 0 8px rgba(0, 126, 158, 0.1)' : 'none',
+                        transition: 'all 0.2s'
+                      }}
+                    >
+                      {/* Left: Icon and wrapped filename */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', overflow: 'hidden', flex: 1 }}>
+                        <FileText size={15} style={{ color: isSelectedA ? '#015294' : isSelectedB ? '#007E9E' : '#64748b', flexShrink: 0 }} />
+                        <div style={{ display: 'flex', flexDirection: 'column', textAlign: 'left', minWidth: 0, flex: 1 }}>
+                          <span style={{ fontSize: '12px', fontWeight: 600, color: '#1e293b', whiteSpace: 'normal', wordBreak: 'break-all', lineHeight: '1.3' }}>
+                            {file.displayName}
+                          </span>
+                          <span style={{ fontSize: '10px', color: '#64748b', marginTop: '2px' }}>{formatBytes(file.size)}</span>
+                        </div>
+                      </div>
+                      
+                      {/* Right: Actions */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0 }}>
+                        <button
+                          onClick={() => {
+                            setFileA(isSelectedA ? null : file.filename);
+                            if (isSelectedB) setFileB(null);
+                          }}
+                          style={{
+                            width: '20px',
+                            height: '20px',
+                            borderRadius: '50%',
+                            fontSize: '9px',
+                            fontWeight: 700,
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            border: isSelectedA ? 'none' : '1px solid rgba(1, 82, 148, 0.4)',
+                            background: isSelectedA ? '#015294' : 'transparent',
+                            color: isSelectedA ? '#fff' : '#015294',
+                            transition: 'all 0.2s'
+                          }}
+                          title={isSelectedA ? "Unselect Original" : "Set as Original (A)"}
+                        >
+                          A
+                        </button>
+                        
+                        <button
+                          onClick={() => {
+                            setFileB(isSelectedB ? null : file.filename);
+                            if (isSelectedA) setFileA(null);
+                          }}
+                          style={{
+                            width: '20px',
+                            height: '20px',
+                            borderRadius: '50%',
+                            fontSize: '9px',
+                            fontWeight: 700,
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            border: isSelectedB ? 'none' : '1px solid rgba(0, 126, 158, 0.4)',
+                            background: isSelectedB ? '#007E9E' : 'transparent',
+                            color: isSelectedB ? '#fff' : '#007E9E',
+                            transition: 'all 0.2s'
+                          }}
+                          title={isSelectedB ? "Unselect Revised" : "Set as Revised (B)"}
+                        >
+                          B
+                        </button>
+                        
+                        <a 
+                          href={`${API_BASE}/download/${file.filename}`}
+                          style={{ 
+                            width: '20px',
+                            height: '20px',
+                            borderRadius: '50%',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            background: '#f1f5f9',
+                            border: '1px solid #cbd5e1',
+                            color: '#64748b',
+                            transition: 'all 0.2s',
+                            cursor: 'pointer'
+                          }}
+                          title="Download file"
+                        >
+                          <Download size={10} />
+                        </a>
+                        
+                        <button
+                          onClick={async (e) => {
+                            e.stopPropagation();
+                            if (confirm(`Are you sure you want to delete ${file.displayName}?`)) {
+                              await handleDeleteFile(file.filename);
+                            }
+                          }}
+                          style={{
+                            width: '20px',
+                            height: '20px',
+                            borderRadius: '50%',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            background: '#fef2f2',
+                            border: '1px solid #fee2e2',
+                            color: '#ef4444',
+                            cursor: 'pointer',
+                            transition: 'all 0.2s'
+                          }}
+                          className="delete-btn-hover"
+                          title="Delete document"
+                        >
+                          <Trash2 size={10} />
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })
               )}
             </div>
           </div>
+        </div>
 
-          {/* 3. Default Welcome State */}
-          {!report && !isLoading && (
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', flex: 1, gap: '20px', textAlign: 'center', padding: '40px' }}>
-              <div style={{ width: '80px', height: '80px', borderRadius: '24px', background: 'hsla(var(--primary) / 0.15)', border: '1px solid hsla(var(--primary) / 0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '10px' }} className="pulsing-glow">
-                <FileCheck size={40} style={{ color: 'hsl(var(--primary-glow))' }} />
-              </div>
-              <div style={{ maxWidth: '500px' }}>
-                <h2 style={{ fontSize: '24px', marginBottom: '10px' }}>Welcome to AlloCapUpdates</h2>
-                <p style={{ fontSize: '14px', color: 'hsl(var(--text-muted))', lineHeight: 1.6 }}>
-                  Choose your documents in the left **Document Storage** sidebar to set the **Original (A)** and **Revised (B)** targets, then hit **Compare Documents** to launch the analysis.
-                </p>
-              </div>
+        {/* Workspace Content Panel */}
+        <div className="workspace-content">
+          
+          {/* Top-level Configuration Card (Slots A/B & Compare Button) */}
+          <div className="glass-card" style={{ padding: '16px', marginBottom: '20px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
               
-              {/* Feature boxes */}
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px', width: '100%', maxWidth: '800px', marginTop: '24px' }}>
-                <div className="glass-card" style={{ padding: '16px', textAlign: 'left' }}>
-                  <FileText size={20} style={{ color: 'hsl(var(--primary-glow))', marginBottom: '8px' }} />
-                  <h4 style={{ fontSize: '14px', marginBottom: '4px' }}>Text Comparison</h4>
-                  <p style={{ fontSize: '12px', color: 'hsl(var(--text-muted))' }}>Audits edits, deletions, additions and dates.</p>
-                </div>
-                <div className="glass-card" style={{ padding: '16px', textAlign: 'left' }}>
-                  <Table size={20} style={{ color: 'hsl(var(--secondary))', marginBottom: '8px' }} />
-                  <h4 style={{ fontSize: '14px', marginBottom: '4px' }}>Table Auditing</h4>
-                  <p style={{ fontSize: '12px', color: 'hsl(var(--text-muted))' }}>Tracks column shifts and cell modifications.</p>
-                </div>
-                <div className="glass-card" style={{ padding: '16px', textAlign: 'left' }}>
-                  <Layers size={20} style={{ color: 'hsl(var(--success))', marginBottom: '8px' }} />
-                  <h4 style={{ fontSize: '14px', marginBottom: '4px' }}>Visual Changes</h4>
-                  <p style={{ fontSize: '12px', color: 'hsl(var(--text-muted))' }}>Checks layout blocks, logo edits, and diagrams.</p>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* 4. Comparison Report State */}
-          {report && !isLoading && (
-            <div style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
-              
-              {/* Tab selectors */}
-              <div style={{ display: 'flex', borderBottom: '1px solid hsla(224, 71%, 20%, 0.4)', paddingBottom: '12px', gap: '8px', marginBottom: '16px' }}>
-                <button 
-                  onClick={() => setActiveTab('summary')}
-                  className={activeTab === 'summary' ? 'btn-primary' : 'btn-secondary'}
-                  style={{ padding: '8px 16px', fontSize: '13px', borderRadius: '8px' }}
-                >
-                  <LayoutGrid size={16} /> Summary
-                </button>
-                <button 
-                  onClick={() => setActiveTab('text')}
-                  className={activeTab === 'text' ? 'btn-primary' : 'btn-secondary'}
-                  style={{ padding: '8px 16px', fontSize: '13px', borderRadius: '8px' }}
-                >
-                  <FileText size={16} /> Text Changes ({report.textChanges.length})
-                </button>
-                <button 
-                  onClick={() => setActiveTab('tables')}
-                  className={activeTab === 'tables' ? 'btn-primary' : 'btn-secondary'}
-                  style={{ padding: '8px 16px', fontSize: '13px', borderRadius: '8px' }}
-                >
-                  <Table size={16} /> Tables ({report.tableChanges.length})
-                </button>
-                <button 
-                  onClick={() => setActiveTab('visuals')}
-                  className={activeTab === 'visuals' ? 'btn-primary' : 'btn-secondary'}
-                  style={{ padding: '8px 16px', fontSize: '13px', borderRadius: '8px' }}
-                >
-                  <Layers size={16} /> Visuals ({report.visualChanges.length})
-                </button>
-
-                {/* Floating Chat Trigger */}
-                <button 
-                  onClick={() => setIsChatOpen(true)}
-                  className="btn-secondary"
-                  style={{ marginLeft: 'auto', padding: '8px 16px', fontSize: '13px', borderRadius: '8px', borderColor: 'hsla(var(--border-glow), 0.3)', color: 'hsl(var(--primary-glow))' }}
-                >
-                  <MessageSquare size={16} /> Chat with Agent
-                </button>
-              </div>
-
-              {/* Tab Contents */}
-              <div style={{ flex: 1, overflowY: 'auto', paddingRight: '4px' }}>
-                
-                {/* A. Summary Tab */}
-                {activeTab === 'summary' && (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 200px', gap: '20px' }}>
-                      <div className="glass-card" style={{ padding: '20px' }}>
-                        <h3 style={{ fontSize: '16px', marginBottom: '10px', color: 'hsl(var(--primary-glow))' }}>Executive Summary</h3>
-                        <p style={{ fontSize: '14px', lineHeight: 1.6, color: 'hsl(var(--text-primary))' }}>
-                          {report.overallSummary}
-                        </p>
-                      </div>
-
-                      <div className="glass-card" style={{ padding: '20px', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', gap: '10px' }}>
-                        <h4 style={{ fontSize: '12px', textTransform: 'uppercase', color: 'hsl(var(--text-muted))' }}>Risk Rating</h4>
-                        <div 
-                          style={{ 
-                            fontSize: '24px', 
-                            fontWeight: 700, 
-                            textTransform: 'uppercase', 
-                            color: getSeverityColor(report.riskRating),
-                            textShadow: `0 0 10px ${getSeverityColor(report.riskRating)}40`,
-                            border: `2px solid ${getSeverityColor(report.riskRating)}`,
-                            padding: '8px 24px',
-                            borderRadius: '30px'
-                          }}
-                        >
-                          {report.riskRating}
-                        </div>
-                        <span style={{ fontSize: '11px', color: 'hsl(var(--text-muted))', textAlign: 'center' }}>Based on clause shifts</span>
-                      </div>
-                    </div>
-
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px' }}>
-                      <div className="glass-card" style={{ padding: '16px', textAlign: 'center' }}>
-                        <h4 style={{ fontSize: '28px', color: 'hsl(var(--primary-glow))', fontWeight: 700 }}>{report.textChanges.length}</h4>
-                        <p style={{ fontSize: '12px', color: 'hsl(var(--text-muted))' }}>Text Modifications</p>
-                      </div>
-                      <div className="glass-card" style={{ padding: '16px', textAlign: 'center' }}>
-                        <h4 style={{ fontSize: '28px', color: 'hsl(var(--secondary))', fontWeight: 700 }}>{report.tableChanges.length}</h4>
-                        <p style={{ fontSize: '12px', color: 'hsl(var(--text-muted))' }}>Table Modifications</p>
-                      </div>
-                      <div className="glass-card" style={{ padding: '16px', textAlign: 'center' }}>
-                        <h4 style={{ fontSize: '28px', color: 'hsl(var(--success))', fontWeight: 700 }}>{report.visualChanges.length}</h4>
-                        <p style={{ fontSize: '12px', color: 'hsl(var(--text-muted))' }}>Visual & Logo Changes</p>
-                      </div>
+              {/* Slot A: Original */}
+              <div 
+                style={{ 
+                  padding: '12px 16px', 
+                  border: '1px solid',
+                  borderColor: fileA ? '#015294' : '#cbd5e1',
+                  background: fileA ? 'rgba(1, 82, 148, 0.04)' : '#f8fafc',
+                  borderRadius: '6px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  gap: '12px'
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', overflow: 'hidden', flex: 1 }}>
+                  <div style={{ width: '28px', height: '28px', borderRadius: '4px', background: fileA ? '#015294' : '#cbd5e1', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <FileText size={14} color="#fff" />
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0, flex: 1 }}>
+                    <div style={{ fontSize: '10px', textTransform: 'uppercase', color: '#64748b', fontWeight: 600 }}>Original Document (A)</div>
+                    <div style={{ fontSize: '12px', fontWeight: 600, color: fileA ? '#1e293b' : '#94a3b8', whiteSpace: 'normal', wordBreak: 'break-all' }}>
+                      {fileA ? files.find(f => f.filename === fileA)?.displayName : "No document selected"}
                     </div>
                   </div>
+                </div>
+                {fileA && (
+                  <button onClick={() => setFileA(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748b', display: 'flex', padding: '4px' }}>
+                    <X size={14} />
+                  </button>
                 )}
+              </div>
 
-                {/* B. Text Changes Tab */}
-                {activeTab === 'text' && (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                    {report.textChanges.length === 0 ? (
-                      <div style={{ padding: '40px', textAlign: 'center', color: 'hsl(var(--text-muted))' }}>No text modifications found.</div>
-                    ) : (
-                      report.textChanges.map((change, index) => (
-                        <div key={index} className="glass-card" style={{ padding: '16px', borderLeft: `4px solid ${getSeverityColor(change.severity)}` }}>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-                            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                              <span style={{ fontSize: '12px', padding: '3px 8px', borderRadius: '4px', background: 'hsla(224, 71%, 15%, 0.6)', fontWeight: 600 }}>Page {change.page}</span>
-                              <span style={{ fontSize: '11px', textTransform: 'uppercase', fontWeight: 600, color: change.type === 'added' ? 'hsl(var(--success))' : change.type === 'deleted' ? 'hsl(var(--danger))' : 'hsl(var(--secondary))' }}>
-                                {change.type}
-                              </span>
-                            </div>
-                            <span style={{ fontSize: '10px', textTransform: 'uppercase', color: getSeverityColor(change.severity), fontWeight: 700 }}>{change.severity} risk</span>
+              {/* Slot B: Revised */}
+              <div 
+                style={{ 
+                  padding: '12px 16px', 
+                  border: '1px solid',
+                  borderColor: fileB ? '#007E9E' : '#cbd5e1',
+                  background: fileB ? 'rgba(0, 126, 158, 0.04)' : '#f8fafc',
+                  borderRadius: '6px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  gap: '12px'
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', overflow: 'hidden', flex: 1 }}>
+                  <div style={{ width: '28px', height: '28px', borderRadius: '4px', background: fileB ? '#007E9E' : '#cbd5e1', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <FileText size={14} color="#fff" />
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0, flex: 1 }}>
+                    <div style={{ fontSize: '10px', textTransform: 'uppercase', color: '#64748b', fontWeight: 600 }}>Revised Document (B)</div>
+                    <div style={{ fontSize: '12px', fontWeight: 600, color: fileB ? '#1e293b' : '#94a3b8', whiteSpace: 'normal', wordBreak: 'break-all' }}>
+                      {fileB ? files.find(f => f.filename === fileB)?.displayName : "No document selected"}
+                    </div>
+                  </div>
+                </div>
+                {fileB && (
+                  <button onClick={() => setFileB(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748b', display: 'flex', padding: '4px' }}>
+                    <X size={14} />
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Main Action Button */}
+            <button 
+              onClick={handleCompare}
+              disabled={!fileA || !fileB || isLoading}
+              className="btn-primary"
+              style={{ width: '100%', justifyContent: 'center', padding: '10px 0', fontSize: '13px', borderRadius: '4px' }}
+            >
+              {isLoading ? (
+                <>
+                  <RefreshCw size={14} className="spin" style={{ color: '#fff' }} />
+                  <span>Auditing Comparison...</span>
+                </>
+              ) : (
+                <>
+                  <span>Compare Documents</span>
+                  <ArrowRight size={14} />
+                </>
+              )}
+            </button>
+          </div>
+
+          {/* Core Content Area */}
+          <div style={{ position: 'relative', minHeight: '400px' }}>
+            
+            {/* 1. Loading Panel */}
+            {isLoading && (
+              <div style={{ position: 'absolute', inset: 0, background: 'rgba(240, 242, 243, 0.96)', backdropFilter: 'blur(8px)', zIndex: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px', borderRadius: 'var(--border-radius)' }}>
+                <div style={{ maxWidth: '860px', width: '100%', display: 'grid', gridTemplateColumns: '1fr 1.2fr', gap: '32px', alignItems: 'start' }}>
+                  
+                  {/* Left: Progress stepper */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                      <div style={{ position: 'relative', width: '48px', height: '48px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                        <div style={{ position: 'absolute', inset: 0, border: '3px solid rgba(1, 82, 148, 0.1)', borderRadius: '50%' }}></div>
+                        <div style={{ position: 'absolute', inset: 0, border: '3px solid transparent', borderTopColor: '#015294', borderRightColor: '#007E9E', borderRadius: '50%', animation: 'spin 1.2s cubic-bezier(0.5, 0, 0.5, 1) infinite' }}></div>
+                        <FileCheck size={16} style={{ color: '#015294' }} />
+                      </div>
+                      <div style={{ textAlign: 'left' }}>
+                        <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#203865', margin: 0 }}>
+                          Comparing Documents
+                        </h3>
+                        <p style={{ fontSize: '11px', color: '#64748b', margin: '2px 0 0' }}>Analyzing clauses & structures...</p>
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', textAlign: 'left', background: '#ffffff', border: '1px solid #cbd5e1', padding: '20px', borderRadius: '6px' }}>
+                      {[
+                        "Initializing Original Document...",
+                        "Initializing Revised Document...",
+                        "Analyzing document layout...",
+                        "Comparing text and clauses...",
+                        "Generating comparison report..."
+                      ].map((step, idx) => {
+                        const isDone = loadingStep > idx;
+                        const isActive = loadingStep === idx;
+                        
+                        return (
+                          <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '12px', opacity: isDone || isActive ? 1 : 0.4, transition: 'opacity 0.3s' }}>
+                            {isDone ? (
+                              <div style={{ width: '18px', height: '18px', borderRadius: '50%', background: '#21874c', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: '10px', fontWeight: 'bold', flexShrink: 0 }}>✓</div>
+                            ) : isActive ? (
+                              <RefreshCw size={14} className="spin" style={{ color: '#015294', display: 'inline-block', flexShrink: 0 }} />
+                            ) : (
+                              <RefreshCw size={14} style={{ color: '#cbd5e1', display: 'inline-block', flexShrink: 0 }} />
+                            )}
+                            <span style={{ fontSize: '12.5px', color: isActive ? '#015294' : '#64748b', fontWeight: isActive ? 600 : 400 }}>{step}</span>
                           </div>
-                          
-                          <p style={{ fontSize: '13px', fontWeight: 600, marginBottom: '12px' }}>{change.description}</p>
-                          
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', fontSize: '12px' }}>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Right: Console thoughts */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', textAlign: 'left', width: '100%' }}>
+                    <div style={{ fontSize: '11px', textTransform: 'uppercase', color: '#007E9E', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px', letterSpacing: '0.5px' }}>
+                      <RefreshCw size={12} className="spin" style={{ color: '#007E9E' }} /> Comparison Analysis Log
+                    </div>
+                    <div 
+                      ref={thinkingConsoleRef}
+                      style={{ 
+                        background: '#0f172a', 
+                        border: '1px solid #334155', 
+                        padding: '16px', 
+                        borderRadius: '6px', 
+                        height: '320px', 
+                        overflowY: 'auto', 
+                        boxShadow: 'inset 0 2px 8px rgba(0,0,0,0.2)',
+                        display: 'flex',
+                        flexDirection: 'column'
+                      }}
+                    >
+                      {renderFormattedThinking(thinkingText)}
+                    </div>
+                  </div>
+
+                </div>
+              </div>
+            )}
+
+            {/* 2. Welcome State */}
+            {!report && !isLoading && (
+              <div className="glass-card" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '40px', gap: '20px', textAlign: 'center' }}>
+                <div style={{ width: '70px', height: '70px', borderRadius: '18px', background: 'rgba(1, 82, 148, 0.05)', border: '1px solid rgba(1, 82, 148, 0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '8px' }} className="pulsing-glow">
+                  <FileCheck size={36} style={{ color: '#015294' }} />
+                </div>
+                <div style={{ maxWidth: '520px' }}>
+                  <h2 style={{ fontSize: '20px', color: '#203865', marginBottom: '8px' }}>Automated Comparison Workspace</h2>
+                  <p style={{ fontSize: '13px', color: '#64748b', lineHeight: 1.6 }}>
+                    Open the **Document Storage** drawer to upload files. Select the **Original (A)** and **Revised (B)** documents, then click **Compare Documents** to run the comparison.
+                  </p>
+                </div>
+                
+                {/* Feature details grid */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px', width: '100%', maxWidth: '780px', marginTop: '16px' }}>
+                  <div className="glass-card" style={{ padding: '16px', textAlign: 'left', background: '#f8fafc' }}>
+                    <FileText size={20} style={{ color: '#015294', marginBottom: '8px' }} />
+                    <h4 style={{ fontSize: '13px', color: '#203865', marginBottom: '4px' }}>Text Comparison</h4>
+                    <p style={{ fontSize: '11px', color: '#64748b' }}>Audits edits, deletions, additions and dates.</p>
+                  </div>
+                  <div className="glass-card" style={{ padding: '16px', textAlign: 'left', background: '#f8fafc' }}>
+                    <Table size={20} style={{ color: '#007E9E', marginBottom: '8px' }} />
+                    <h4 style={{ fontSize: '13px', color: '#203865', marginBottom: '4px' }}>Table Auditing</h4>
+                    <p style={{ fontSize: '11px', color: '#64748b' }}>Tracks column shifts and cell modifications.</p>
+                  </div>
+                  <div className="glass-card" style={{ padding: '16px', textAlign: 'left', background: '#f8fafc' }}>
+                    <Layers size={20} style={{ color: '#21874c', marginBottom: '8px' }} />
+                    <h4 style={{ fontSize: '13px', color: '#203865', marginBottom: '4px' }}>Visual Changes</h4>
+                    <p style={{ fontSize: '11px', color: '#64748b' }}>Checks layout blocks, logo edits, and diagrams.</p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* 3. Report Details State */}
+            {report && !isLoading && (
+              <div className="glass-card" style={{ padding: '20px', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+                
+                {/* Tab selections */}
+                <div style={{ display: 'flex', borderBottom: '1px solid #e2e8f0', paddingBottom: '10px', gap: '8px', marginBottom: '16px', alignItems: 'center' }}>
+                  <button 
+                    onClick={() => setActiveTab('summary')}
+                    className={activeTab === 'summary' ? 'btn-primary' : 'btn-secondary'}
+                    style={{ padding: '6px 12px', fontSize: '12px', borderRadius: '4px' }}
+                  >
+                    <LayoutGrid size={14} /> Summary
+                  </button>
+                  <button 
+                    onClick={() => setActiveTab('text')}
+                    className={activeTab === 'text' ? 'btn-primary' : 'btn-secondary'}
+                    style={{ padding: '6px 12px', fontSize: '12px', borderRadius: '4px' }}
+                  >
+                    <FileText size={14} /> Text Changes ({report.textChanges.length})
+                  </button>
+                  <button 
+                    onClick={() => setActiveTab('tables')}
+                    className={activeTab === 'tables' ? 'btn-primary' : 'btn-secondary'}
+                    style={{ padding: '6px 12px', fontSize: '12px', borderRadius: '4px' }}
+                  >
+                    <Table size={14} /> Tables ({report.tableChanges.length})
+                  </button>
+                  <button 
+                    onClick={() => setActiveTab('visuals')}
+                    className={activeTab === 'visuals' ? 'btn-primary' : 'btn-secondary'}
+                    style={{ padding: '6px 12px', fontSize: '12px', borderRadius: '4px' }}
+                  >
+                    <Layers size={14} /> Visuals ({report.visualChanges.length})
+                  </button>
+
+                  <button 
+                    onClick={() => setIsChatOpen(true)}
+                    className="btn-secondary"
+                    style={{ marginLeft: 'auto', padding: '6px 12px', fontSize: '12px', borderRadius: '4px', borderColor: '#cbd5e1', color: '#007E9E' }}
+                  >
+                    <MessageSquare size={14} /> Ask Assistant
+                  </button>
+                </div>
+
+                {/* Tab Contents */}
+                <div style={{ overflowY: 'auto', paddingRight: '4px' }}>
+                  
+                  {/* Summary Tab */}
+                  {activeTab === 'summary' && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 220px', gap: '20px' }}>
+                        <div className="glass-card" style={{ padding: '16px', borderLeft: '4px solid #015294' }}>
+                          <h3 style={{ fontSize: '14px', marginBottom: '8px', color: '#203865' }}>Executive Summary</h3>
+                          <p style={{ fontSize: '13px', lineHeight: 1.5, color: '#334155' }}>
+                            {report.overallSummary}
+                          </p>
+                        </div>
+
+                        <div className="glass-card" style={{ padding: '16px', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', gap: '8px', background: '#f8fafc' }}>
+                          <h4 style={{ fontSize: '11px', textTransform: 'uppercase', color: '#64748b', fontWeight: 600 }}>Risk Rating</h4>
+                          <div 
+                            style={{ 
+                              fontSize: '18px', 
+                              fontWeight: 800, 
+                              textTransform: 'uppercase', 
+                              color: getSeverityColor(report.riskRating),
+                              border: `2px solid ${getSeverityColor(report.riskRating)}`,
+                              padding: '4px 16px',
+                              borderRadius: '20px',
+                              background: '#ffffff'
+                            }}
+                          >
+                            {report.riskRating}
+                          </div>
+                          <span style={{ fontSize: '10px', color: '#64748b' }}>Based on clause shifts</span>
+                        </div>
+                      </div>
+
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px' }}>
+                        <div className="glass-card" style={{ padding: '12px', textAlign: 'center', background: '#f8fafc' }}>
+                          <h4 style={{ fontSize: '24px', color: '#015294', fontWeight: 700 }}>{report.textChanges.length}</h4>
+                          <p style={{ fontSize: '11px', color: '#64748b' }}>Text Modifications</p>
+                        </div>
+                        <div className="glass-card" style={{ padding: '12px', textAlign: 'center', background: '#f8fafc' }}>
+                          <h4 style={{ fontSize: '24px', color: '#007E9E', fontWeight: 700 }}>{report.tableChanges.length}</h4>
+                          <p style={{ fontSize: '11px', color: '#64748b' }}>Table Modifications</p>
+                        </div>
+                        <div className="glass-card" style={{ padding: '12px', textAlign: 'center', background: '#f8fafc' }}>
+                          <h4 style={{ fontSize: '24px', color: '#21874c', fontWeight: 700 }}>{report.visualChanges.length}</h4>
+                          <p style={{ fontSize: '11px', color: '#64748b' }}>Visual & Logo Changes</p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Text Changes Tab */}
+                  {activeTab === 'text' && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                      {report.textChanges.length === 0 ? (
+                        <div style={{ padding: '30px', textAlign: 'center', color: '#94a3b8' }}>No text modifications found.</div>
+                      ) : (
+                        report.textChanges.map((change, index) => (
+                          <div key={index} className="glass-card" style={{ padding: '16px', borderLeft: `4px solid ${getSeverityColor(change.severity)}` }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                              <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                                <span style={{ fontSize: '11px', padding: '2px 6px', borderRadius: '4px', background: '#e2e8f0', fontWeight: 700, color: '#334155' }}>Page {change.page}</span>
+                                <span style={{ fontSize: '10px', textTransform: 'uppercase', fontWeight: 700, color: change.type === 'added' ? '#21874c' : change.type === 'deleted' ? '#ef4444' : '#007E9E' }}>
+                                  {change.type}
+                                </span>
+                              </div>
+                              <span style={{ fontSize: '10px', textTransform: 'uppercase', color: getSeverityColor(change.severity), fontWeight: 700 }}>{change.severity} risk</span>
+                            </div>
+                            
+                            <p style={{ fontSize: '13px', fontWeight: 700, color: '#1e293b', marginBottom: '10px' }}>{change.description}</p>
+                            
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', fontSize: '11.5px' }}>
                               {/* Before (Original) */}
-                              <div style={{ padding: '10px', background: change.type === 'added' ? 'transparent' : 'rgba(239, 68, 68, 0.08)', border: change.type === 'added' ? '1px dashed hsla(224, 71%, 20%, 0.6)' : '1px solid rgba(239, 68, 68, 0.2)', borderRadius: '6px', display: 'flex', flexDirection: 'column' }}>
-                                <div style={{ fontSize: '10px', textTransform: 'uppercase', color: change.type === 'added' ? 'hsl(var(--text-muted))' : 'rgb(239, 68, 68)', fontWeight: 600, marginBottom: '4px' }}>Before (Original)</div>
+                              <div style={{ padding: '10px', background: change.type === 'added' ? 'transparent' : '#fef2f2', border: change.type === 'added' ? '1px dashed #cbd5e1' : '1px solid #fee2e2', borderRadius: '4px', display: 'flex', flexDirection: 'column' }}>
+                                <div style={{ fontSize: '9px', textTransform: 'uppercase', color: change.type === 'added' ? '#64748b' : '#ef4444', fontWeight: 700, marginBottom: '4px' }}>Before (Original)</div>
                                 {change.type === 'added' ? (
-                                  <div style={{ color: 'hsl(var(--text-muted))', fontStyle: 'italic', margin: 'auto 0' }}>[No text existed in original document]</div>
+                                  <div style={{ color: '#94a3b8', fontStyle: 'italic', margin: 'auto 0' }}>[No text existed in original document]</div>
                                 ) : (
-                                  <div style={{ fontFamily: 'monospace', whiteSpace: 'pre-wrap' }}>{change.originalText}</div>
+                                  <div style={{ fontFamily: 'monospace', whiteSpace: 'pre-wrap', color: '#1e293b' }}>{change.originalText}</div>
                                 )}
                               </div>
                               
                               {/* After (Revised) */}
-                              <div style={{ padding: '10px', background: change.type === 'deleted' ? 'transparent' : 'rgba(34, 197, 94, 0.08)', border: change.type === 'deleted' ? '1px dashed hsla(224, 71%, 20%, 0.6)' : '1px solid rgba(34, 197, 94, 0.2)', borderRadius: '6px', display: 'flex', flexDirection: 'column' }}>
-                                <div style={{ fontSize: '10px', textTransform: 'uppercase', color: change.type === 'deleted' ? 'hsl(var(--text-muted))' : 'rgb(34, 197, 94)', fontWeight: 600, marginBottom: '4px' }}>After (Revised)</div>
+                              <div style={{ padding: '10px', background: change.type === 'deleted' ? 'transparent' : '#f0fdf4', border: change.type === 'deleted' ? '1px dashed #cbd5e1' : '1px solid #dcfce7', borderRadius: '4px', display: 'flex', flexDirection: 'column' }}>
+                                <div style={{ fontSize: '9px', textTransform: 'uppercase', color: change.type === 'deleted' ? '#64748b' : '#21874c', fontWeight: 700, marginBottom: '4px' }}>After (Revised)</div>
                                 {change.type === 'deleted' ? (
-                                  <div style={{ color: 'hsl(var(--text-muted))', fontStyle: 'italic', margin: 'auto 0' }}>[Clause deleted in revised document]</div>
+                                  <div style={{ color: '#94a3b8', fontStyle: 'italic', margin: 'auto 0' }}>[Clause deleted in revised document]</div>
                                 ) : (
-                                  <div style={{ fontFamily: 'monospace', whiteSpace: 'pre-wrap' }}>{change.revisedText}</div>
+                                  <div style={{ fontFamily: 'monospace', whiteSpace: 'pre-wrap', color: '#1e293b' }}>{change.revisedText}</div>
                                 )}
                               </div>
                             </div>
-                        </div>
-                      ))
-                    )}
-                  </div>
-                )}
-
-                {/* C. Table Changes Tab */}
-                {activeTab === 'tables' && (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                    {report.tableChanges.length === 0 ? (
-                      <div style={{ padding: '40px', textAlign: 'center', color: 'hsl(var(--text-muted))' }}>No table layout/value changes found.</div>
-                    ) : (
-                      report.tableChanges.map((change, index) => (
-                        <div key={index} className="glass-card" style={{ padding: '16px', borderLeft: `4px solid ${getSeverityColor(change.severity)}` }}>
-                          <div style={{ display: 'flex', justifyItems: 'space-between', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-                            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                              <span style={{ fontSize: '12px', padding: '3px 8px', borderRadius: '4px', background: 'hsla(224, 71%, 15%, 0.6)', fontWeight: 600 }}>Page {change.page}</span>
-                              <span style={{ fontSize: '13px', fontWeight: 600, color: 'hsl(var(--secondary))' }}>{change.tableName}</span>
-                              <span style={{ fontSize: '11px', textTransform: 'uppercase', fontWeight: 600, color: 'hsl(var(--text-muted))' }}>
-                                ({change.type.replace('_', ' ')})
-                              </span>
-                            </div>
-                            <span style={{ fontSize: '10px', textTransform: 'uppercase', color: getSeverityColor(change.severity), fontWeight: 700 }}>{change.severity} risk</span>
                           </div>
-                          
-                          <p style={{ fontSize: '13px', fontWeight: 600, marginBottom: '12px' }}>{change.description}</p>
-                          
-                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', fontSize: '12px' }}>
-                            {/* Before (Original) */}
-                            <div style={{ padding: '10px', background: !change.originalText ? 'transparent' : 'rgba(239, 68, 68, 0.08)', border: !change.originalText ? '1px dashed hsla(224, 71%, 20%, 0.6)' : '1px solid rgba(239, 68, 68, 0.2)', borderRadius: '6px', display: 'flex', flexDirection: 'column' }}>
-                              <div style={{ fontSize: '10px', textTransform: 'uppercase', color: !change.originalText ? 'hsl(var(--text-muted))' : 'rgb(239, 68, 68)', fontWeight: 600, marginBottom: '4px' }}>Before (Original Table)</div>
-                              {!change.originalText ? (
-                                <div style={{ color: 'hsl(var(--text-muted))', fontStyle: 'italic', margin: 'auto 0' }}>[No entry existed in original table]</div>
-                              ) : (
-                                <div style={{ fontFamily: 'monospace', whiteSpace: 'pre-wrap' }}>{change.originalText}</div>
-                              )}
+                        ))
+                      )}
+                    </div>
+                  )}
+
+                  {/* Table Changes Tab */}
+                  {activeTab === 'tables' && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                      {report.tableChanges.length === 0 ? (
+                        <div style={{ padding: '30px', textAlign: 'center', color: '#94a3b8' }}>No table layout or value changes found.</div>
+                      ) : (
+                        report.tableChanges.map((change, index) => (
+                          <div key={index} className="glass-card" style={{ padding: '16px', borderLeft: `4px solid ${getSeverityColor(change.severity)}` }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                              <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                                <span style={{ fontSize: '11px', padding: '2px 6px', borderRadius: '4px', background: '#e2e8f0', fontWeight: 700, color: '#334155' }}>Page {change.page}</span>
+                                <span style={{ fontSize: '12px', fontWeight: 700, color: '#203865' }}>{change.tableName}</span>
+                                <span style={{ fontSize: '10px', textTransform: 'uppercase', fontWeight: 700, color: '#64748b' }}>
+                                  ({change.type.replace('_', ' ')})
+                                </span>
+                              </div>
+                              <span style={{ fontSize: '10px', textTransform: 'uppercase', color: getSeverityColor(change.severity), fontWeight: 700 }}>{change.severity} risk</span>
                             </div>
                             
-                            {/* After (Revised) */}
-                            <div style={{ padding: '10px', background: !change.revisedText ? 'transparent' : 'rgba(34, 197, 94, 0.08)', border: !change.revisedText ? '1px dashed hsla(224, 71%, 20%, 0.6)' : '1px solid rgba(34, 197, 94, 0.2)', borderRadius: '6px', display: 'flex', flexDirection: 'column' }}>
-                              <div style={{ fontSize: '10px', textTransform: 'uppercase', color: !change.revisedText ? 'hsl(var(--text-muted))' : 'rgb(34, 197, 94)', fontWeight: 600, marginBottom: '4px' }}>After (Revised Table)</div>
-                              {!change.revisedText ? (
-                                <div style={{ color: 'hsl(var(--text-muted))', fontStyle: 'italic', margin: 'auto 0' }}>[Row/cell deleted in revised table]</div>
-                              ) : (
-                                <div style={{ fontFamily: 'monospace', whiteSpace: 'pre-wrap' }}>{change.revisedText}</div>
-                              )}
+                            <p style={{ fontSize: '13px', fontWeight: 700, color: '#1e293b', marginBottom: '10px' }}>{change.description}</p>
+                            
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', fontSize: '11.5px' }}>
+                              {/* Before (Original) */}
+                              <div style={{ padding: '10px', background: !change.originalText ? 'transparent' : '#fef2f2', border: !change.originalText ? '1px dashed #cbd5e1' : '1px solid #fee2e2', borderRadius: '4px', display: 'flex', flexDirection: 'column' }}>
+                                <div style={{ fontSize: '9px', textTransform: 'uppercase', color: !change.originalText ? '#64748b' : '#ef4444', fontWeight: 700, marginBottom: '4px' }}>Before (Original Table)</div>
+                                {!change.originalText ? (
+                                  <div style={{ color: '#94a3b8', fontStyle: 'italic', margin: 'auto 0' }}>[No entry existed in original table]</div>
+                                ) : (
+                                  <div style={{ fontFamily: 'monospace', whiteSpace: 'pre-wrap', color: '#1e293b' }}>{change.originalText}</div>
+                                )}
+                              </div>
+                              
+                              {/* After (Revised) */}
+                              <div style={{ padding: '10px', background: !change.revisedText ? 'transparent' : '#f0fdf4', border: !change.revisedText ? '1px dashed #cbd5e1' : '1px solid #dcfce7', borderRadius: '4px', display: 'flex', flexDirection: 'column' }}>
+                                <div style={{ fontSize: '9px', textTransform: 'uppercase', color: !change.revisedText ? '#64748b' : '#21874c', fontWeight: 700, marginBottom: '4px' }}>After (Revised Table)</div>
+                                {!change.revisedText ? (
+                                  <div style={{ color: '#94a3b8', fontStyle: 'italic', margin: 'auto 0' }}>[Row/cell deleted in revised table]</div>
+                                ) : (
+                                  <div style={{ fontFamily: 'monospace', whiteSpace: 'pre-wrap', color: '#1e293b' }}>{change.revisedText}</div>
+                                )}
+                              </div>
                             </div>
                           </div>
-                        </div>
-                      ))
-                    )}
-                  </div>
-                )}
+                        ))
+                      )}
+                    </div>
+                  )}
 
-                {/* D. Visual Changes Tab */}
-                {activeTab === 'visuals' && (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                    {report.visualChanges.length === 0 ? (
-                      <div style={{ padding: '40px', textAlign: 'center', color: 'hsl(var(--text-muted))' }}>No visual layout or image shifts found.</div>
-                    ) : (
-                      report.visualChanges.map((change, index) => (
-                        <div key={index} className="glass-card" style={{ padding: '16px', borderLeft: `4px solid ${getSeverityColor(change.severity)}` }}>
-                          <div style={{ display: 'flex', justifyItems: 'space-between', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-                            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                              <span style={{ fontSize: '12px', padding: '3px 8px', borderRadius: '4px', background: 'hsla(224, 71%, 15%, 0.6)', fontWeight: 600 }}>Page {change.page}</span>
-                              <span style={{ fontSize: '13px', fontWeight: 600, color: 'hsl(var(--success))', textTransform: 'uppercase' }}>{change.type.replace('_', ' ')}</span>
-                            </div>
-                            <span style={{ fontSize: '10px', textTransform: 'uppercase', color: getSeverityColor(change.severity), fontWeight: 700 }}>{change.severity} risk</span>
-                          </div>
-                          
-                          <p style={{ fontSize: '13px', fontWeight: 600, marginBottom: '12px' }}>{change.description}</p>
-                          
-                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', fontSize: '12px' }}>
-                            {/* Before (Original) */}
-                            <div style={{ padding: '10px', background: !change.originalText ? 'transparent' : 'rgba(239, 68, 68, 0.08)', border: !change.originalText ? '1px dashed hsla(224, 71%, 20%, 0.6)' : '1px solid rgba(239, 68, 68, 0.2)', borderRadius: '6px', display: 'flex', flexDirection: 'column' }}>
-                              <div style={{ fontSize: '10px', textTransform: 'uppercase', color: !change.originalText ? 'hsl(var(--text-muted))' : 'rgb(239, 68, 68)', fontWeight: 600, marginBottom: '4px' }}>Before (Original Visual Layout)</div>
-                              {!change.originalText ? (
-                                <div style={{ color: 'hsl(var(--text-muted))', fontStyle: 'italic', margin: 'auto 0' }}>[No visual element in original layout]</div>
-                              ) : (
-                                <div style={{ fontFamily: 'monospace', whiteSpace: 'pre-wrap' }}>{change.originalText}</div>
-                              )}
+                  {/* Visual Changes Tab */}
+                  {activeTab === 'visuals' && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                      {report.visualChanges.length === 0 ? (
+                        <div style={{ padding: '30px', textAlign: 'center', color: '#94a3b8' }}>No visual layout or image shifts found.</div>
+                      ) : (
+                        report.visualChanges.map((change, index) => (
+                          <div key={index} className="glass-card" style={{ padding: '16px', borderLeft: `4px solid ${getSeverityColor(change.severity)}` }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                              <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                                <span style={{ fontSize: '11px', padding: '2px 6px', borderRadius: '4px', background: '#e2e8f0', fontWeight: 700, color: '#334155' }}>Page {change.page}</span>
+                                <span style={{ fontSize: '11px', fontWeight: 700, color: '#21874c', textTransform: 'uppercase' }}>{change.type.replace('_', ' ')}</span>
+                              </div>
+                              <span style={{ fontSize: '10px', textTransform: 'uppercase', color: getSeverityColor(change.severity), fontWeight: 700 }}>{change.severity} risk</span>
                             </div>
                             
-                            {/* After (Revised) */}
-                            <div style={{ padding: '10px', background: !change.revisedText ? 'transparent' : 'rgba(34, 197, 94, 0.08)', border: !change.revisedText ? '1px dashed hsla(224, 71%, 20%, 0.6)' : '1px solid rgba(34, 197, 94, 0.2)', borderRadius: '6px', display: 'flex', flexDirection: 'column' }}>
-                              <div style={{ fontSize: '10px', textTransform: 'uppercase', color: !change.revisedText ? 'hsl(var(--text-muted))' : 'rgb(34, 197, 94)', fontWeight: 600, marginBottom: '4px' }}>After (Revised Visual Layout)</div>
-                              {!change.revisedText ? (
-                                <div style={{ color: 'hsl(var(--text-muted))', fontStyle: 'italic', margin: 'auto 0' }}>[Visual element deleted in revised layout]</div>
-                              ) : (
-                                <div style={{ fontFamily: 'monospace', whiteSpace: 'pre-wrap' }}>{change.revisedText}</div>
-                              )}
+                            <p style={{ fontSize: '13px', fontWeight: 700, color: '#1e293b', marginBottom: '10px' }}>{change.description}</p>
+                            
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', fontSize: '11.5px' }}>
+                              {/* Before (Original) */}
+                              <div style={{ padding: '10px', background: !change.originalText ? 'transparent' : '#fef2f2', border: !change.originalText ? '1px dashed #cbd5e1' : '1px solid #fee2e2', borderRadius: '4px', display: 'flex', flexDirection: 'column' }}>
+                                <div style={{ fontSize: '9px', textTransform: 'uppercase', color: !change.originalText ? '#64748b' : '#ef4444', fontWeight: 700, marginBottom: '4px' }}>Before (Original Visual Layout)</div>
+                                {!change.originalText ? (
+                                  <div style={{ color: '#94a3b8', fontStyle: 'italic', margin: 'auto 0' }}>[No visual element in original layout]</div>
+                                ) : (
+                                  <div style={{ fontFamily: 'monospace', whiteSpace: 'pre-wrap', color: '#1e293b' }}>{change.originalText}</div>
+                                )}
+                              </div>
+                              
+                              {/* After (Revised) */}
+                              <div style={{ padding: '10px', background: !change.revisedText ? 'transparent' : '#f0fdf4', border: !change.revisedText ? '1px dashed #cbd5e1' : '1px solid #dcfce7', borderRadius: '4px', display: 'flex', flexDirection: 'column' }}>
+                                <div style={{ fontSize: '9px', textTransform: 'uppercase', color: !change.revisedText ? '#64748b' : '#21874c', fontWeight: 700, marginBottom: '4px' }}>After (Revised Visual Layout)</div>
+                                {!change.revisedText ? (
+                                  <div style={{ color: '#94a3b8', fontStyle: 'italic', margin: 'auto 0' }}>[Visual element deleted in revised layout]</div>
+                                ) : (
+                                  <div style={{ fontFamily: 'monospace', whiteSpace: 'pre-wrap', color: '#1e293b' }}>{change.revisedText}</div>
+                                )}
+                              </div>
                             </div>
                           </div>
-                        </div>
-                      ))
-                    )}
-                  </div>
-                )}
+                        ))
+                      )}
+                    </div>
+                  )}
 
+                </div>
               </div>
-            </div>
-          )}
+            )}
 
-        </section>
+          </div>
+        </div>
       </main>
 
-      {/* Floating Chat Drawer (Agent chat assistant) */}
+      {/* Floating Chat Drawer (Assistant chat panel) */}
       <div 
         style={{ 
           position: 'fixed',
-          top: 0,
+          top: '55px',
+          bottom: '40px',
           right: isChatOpen ? 0 : '-420px',
           width: '400px',
-          height: '100vh',
-          background: 'hsla(224, 71%, 6%, 0.95)',
-          backdropFilter: 'blur(16px)',
-          borderLeft: '1px solid hsla(224, 71%, 20%, 0.4)',
+          background: '#ffffff',
+          borderLeft: '1px solid #cbd5e1',
           zIndex: 100,
           display: 'flex',
           flexDirection: 'column',
-          boxShadow: '-10px 0 30px rgba(0,0,0,0.5)',
+          boxShadow: '-10px 0 30px rgba(0,0,0,0.05)',
           transition: 'right 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
         }}
       >
         {/* Drawer Header */}
-        <div style={{ padding: '20px', borderBottom: '1px solid hsla(224, 71%, 20%, 0.4)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div style={{ padding: '20px', borderBottom: '1px solid #cbd5e1', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>
-            <h3 style={{ fontSize: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <MessageSquare size={18} style={{ color: 'hsl(var(--primary-glow))' }} /> Audit Chatbot
+            <h3 style={{ fontSize: '15px', fontWeight: 700, margin: 0, color: '#203865', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <MessageSquare size={16} style={{ color: '#007E9E' }} /> Comparison Assistant
             </h3>
-            <p style={{ fontSize: '11px', color: 'hsl(var(--text-muted))' }}>Ask follow-up questions about files</p>
+            <p style={{ fontSize: '11px', color: '#64748b', margin: '2px 0 0' }}>Ask questions about the audit report</p>
           </div>
           <button 
             onClick={() => setIsChatOpen(false)}
-            style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'hsl(var(--text-muted))' }}
+            style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#cbd5e1' }}
           >
-            <X size={20} />
+            <X size={20} style={{ color: '#64748b' }} />
           </button>
         </div>
 
         {/* Chat History */}
-        <div style={{ flex: 1, overflowY: 'auto', padding: '20px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+        <div style={{ flex: 1, overflowY: 'auto', padding: '20px', display: 'flex', flexDirection: 'column', gap: '14px', background: '#f8fafc' }}>
           {chatMessages.map((msg, index) => (
             <div 
               key={index} 
               style={{ 
                 alignSelf: msg.role === 'user' ? 'flex-end' : 'flex-start',
                 maxWidth: '85%',
-                background: msg.role === 'user' ? 'hsl(var(--primary))' : 'hsla(224, 71%, 15%, 0.5)',
-                color: '#fff',
+                background: msg.role === 'user' ? '#015294' : '#ffffff',
+                color: msg.role === 'user' ? '#ffffff' : '#323639',
                 padding: '10px 14px',
-                borderRadius: msg.role === 'user' ? '14px 14px 2px 14px' : '14px 14px 14px 2px',
-                fontSize: '13px',
+                borderRadius: msg.role === 'user' ? '12px 12px 2px 12px' : '12px 12px 12px 2px',
+                fontSize: '12.5px',
                 lineHeight: 1.4,
-                border: msg.role === 'user' ? 'none' : '1px solid hsla(224, 71%, 30%, 0.2)'
+                border: msg.role === 'user' ? 'none' : '1px solid #cbd5e1',
+                boxShadow: msg.role === 'user' ? '0 1px 3px rgba(1, 82, 148, 0.2)' : '0 1px 3px rgba(0,0,0,0.05)'
               }}
             >
               {msg.content}
@@ -1411,26 +1507,26 @@ export default function App() {
             <div 
               style={{ 
                 alignSelf: 'flex-start',
-                background: 'hsla(224, 71%, 15%, 0.5)',
+                background: '#ffffff',
                 padding: '10px 14px',
-                borderRadius: '14px 14px 14px 2px',
-                fontSize: '13px',
-                color: 'hsl(var(--text-muted))',
-                border: '1px solid hsla(224, 71%, 30%, 0.2)',
+                borderRadius: '12px 12px 12px 2px',
+                fontSize: '12.5px',
+                color: '#64748b',
+                border: '1px solid #cbd5e1',
                 display: 'flex',
                 alignItems: 'center',
                 gap: '8px'
               }}
             >
-              <RefreshCw size={12} className="spin" style={{ animation: 'spin 2s linear infinite' }} />
-              Thinking...
+              <RefreshCw size={12} className="spin" style={{ color: '#007E9E' }} />
+              <span>Analyzing...</span>
             </div>
           )}
           <div ref={chatEndRef} />
         </div>
 
         {/* Chat input */}
-        <form onSubmit={handleSendMessage} style={{ padding: '20px', borderTop: '1px solid hsla(224, 71%, 20%, 0.4)', display: 'flex', gap: '8px' }}>
+        <form onSubmit={handleSendMessage} style={{ padding: '20px', borderTop: '1px solid #cbd5e1', display: 'flex', gap: '8px', background: '#ffffff' }}>
           <input 
             type="text"
             value={chatInput}
@@ -1439,11 +1535,11 @@ export default function App() {
             disabled={!fileA || !fileB || isChatLoading}
             style={{ 
               flex: 1, 
-              background: 'hsla(224, 71%, 4%, 0.6)', 
-              border: '1px solid hsla(224, 71%, 20%, 0.6)', 
-              borderRadius: '8px', 
+              background: '#f8fafc', 
+              border: '1px solid #cbd5e1', 
+              borderRadius: '4px', 
               padding: '10px 14px',
-              color: '#fff',
+              color: '#323639',
               fontSize: '13px',
               outline: 'none'
             }}
@@ -1452,12 +1548,36 @@ export default function App() {
             type="submit"
             disabled={!chatInput.trim() || isChatLoading}
             className="btn-primary"
-            style={{ padding: '10px 14px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+            style={{ padding: '10px 14px', borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
           >
             <Send size={14} />
           </button>
         </form>
       </div>
+
+      {/* PCG Branded Footer */}
+      <footer style={{ height: '40px', background: '#002A5D', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 24px', fontSize: '11px', borderTop: '1px solid #004080', zIndex: 40, position: 'fixed', bottom: 0, left: 0, right: 0 }}>
+        <div>
+          <span>AlloCap Updates 2.0 | PCC Demo Instance</span>
+        </div>
+        <div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <svg width="120" height="24" viewBox="0 0 180 35" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <g transform="translate(0, 2)">
+                <rect x="2" y="26" width="26" height="3" rx="0.5" fill="#FFFFFF" />
+                <rect x="4" y="24" width="22" height="2" rx="0.5" fill="#FFFFFF" />
+                <path d="M15 2L3 8H27L15 2Z" fill="#FFFFFF" />
+                <rect x="5" y="8" width="20" height="2" fill="#FFFFFF" />
+                <rect x="7" y="10" width="3" height="14" fill="#FFFFFF" />
+                <rect x="13" y="10" width="4" height="14" fill="#FFFFFF" />
+                <rect x="20" y="10" width="3" height="14" fill="#FFFFFF" />
+              </g>
+              <text x="38" y="18" fill="#FFFFFF" fontFamily="'Raleway', sans-serif" fontSize="11" fontWeight="700" letterSpacing="1">PUBLIC</text>
+              <text x="38" y="28" fill="#A0B0C0" fontFamily="'Raleway', sans-serif" fontSize="8" fontWeight="500" letterSpacing="1.5">CONSULTING GROUP</text>
+            </svg>
+          </div>
+        </div>
+      </footer>
 
     </div>
   );

@@ -5,32 +5,31 @@
   line-height: 1.5;
   font-weight: 400;
 
-  color-scheme: dark;
-  color: #f1f5f9;
-  background-color: #04060e;
+  color-scheme: light;
+  color: #323639;
+  background-color: #f0f2f3;
 
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 
-  /* Color Palette - Inspired by AlloCap Corporate Brand Colors (Cobalt Navy, Teal, & Emerald Green) */
-  --bg-main: 220 40% 6%;          /* Deep Dark Navy Slate */
-  --bg-card: 220 40% 10%;         /* Dark Card Backing */
-  --primary: 217 95% 56%;         /* Electric Cobalt Navy (Inspired by #015294) */
-  --primary-glow: 217 95% 66%;
-  --secondary: 190 95% 45%;        /* AlloCap Cyber Teal (Inspired by #007E9E) */
-  --secondary-glow: 190 95% 55%;
-  --success: 145 70% 42%;         /* Emerald Green (Inspired by #21874c) */
-  --success-glow: 145 70% 52%;
-  --border-glow: 217 95% 56%;
-  --warning: 38 96% 52%;
-  --danger: 355 85% 60%;
-  --text-muted: 215 16% 70%;
-  --text-primary: 210 40% 98%;
+  /* Color Palette - Modernized AlloCap Branding */
+  --primary: 207 98% 29%;         /* Cobalt Navy #015294 */
+  --primary-glow: 207 98% 39%;
+  --secondary: 192 100% 31%;      /* Cyber Teal #007E9E */
+  --secondary-glow: 192 100% 41%;
+  --success: 145 60% 33%;         /* Emerald Green #21874c */
+  --success-glow: 145 60% 43%;
+  --warning: 38 96% 45%;
+  --danger: 355 85% 50%;
+  --text-muted: 215 16% 45%;
+  --text-primary: 215 25% 15%;
+  --bg-main: 210 20% 95%;         /* Soft Light Gray #f0f2f3 */
+  --bg-card: 0 0% 100%;           /* White card backing */
 
   /* Layout Variables */
-  --border-radius: 16px;
+  --border-radius: 8px;
   --transition-smooth: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
@@ -43,39 +42,29 @@
 body {
   margin: 0;
   min-height: 100vh;
-  /* Premium Dark Navy Mesh Background */
-  background: radial-gradient(circle at 15% 15%, hsla(217, 95%, 56%, 0.08) 0%, transparent 45%),
-              radial-gradient(circle at 85% 85%, hsla(190, 95%, 45%, 0.06) 0%, transparent 45%),
-              linear-gradient(180deg, #050711 0%, #020306 100%);
-  background-attachment: fixed;
+  background: #f0f2f3;
   overflow-x: hidden;
-  color: hsl(var(--text-primary));
+  color: #323639;
 }
 
-/* Glassmorphism Styles */
+/* Header & Container Elements */
 .glass-container {
-  background: hsla(220, 40%, 8%, 0.5);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border: 1px solid hsla(220, 40%, 25%, 0.2);
-  border-radius: var(--border-radius);
-  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+  background: #ffffff;
+  border-bottom: 2px solid #015294;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
 }
 
 .glass-card {
-  background: hsla(220, 40%, 10%, 0.45);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid hsla(220, 40%, 25%, 0.18);
+  background: #ffffff;
+  border: 1px solid #d1d5db;
   border-radius: var(--border-radius);
   transition: var(--transition-smooth);
-  box-shadow: 0 4px 20px 0 rgba(0, 0, 0, 0.2);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
 }
 
 .glass-card:hover {
-  border-color: hsla(var(--primary), 0.35);
-  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.45), 0 0 20px hsla(var(--primary), 0.06);
-  transform: translateY(-2px);
+  border-color: hsla(var(--primary), 0.5);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
 }
 
 /* Custom Scrollbars */
@@ -85,134 +74,19 @@ body {
 }
 
 ::-webkit-scrollbar-track {
-  background: hsla(220, 40%, 6%, 0.3);
+  background: #f1f5f9;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: hsla(220, 40%, 25%, 0.45);
+  background: #cbd5e1;
   border-radius: 10px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: hsla(var(--primary), 0.6);
+  background: #94a3b8;
 }
 
-/* Animations */
-@keyframes pulse-glow {
-  0%, 100% {
-    opacity: 0.6;
-    box-shadow: 0 0 15px hsla(var(--primary), 0.2);
-  }
-  50% {
-    opacity: 1;
-    box-shadow: 0 0 30px hsla(var(--primary), 0.4);
-  }
-}
-
-.pulsing-glow {
-  animation: pulse-glow 2s infinite ease-in-out;
-}
-
-/* Text Gradients */
-.glow-text-primary {
-  text-shadow: 0 0 12px hsla(var(--primary), 0.45);
-}
-
-.glow-text-secondary {
-  text-shadow: 0 0 12px hsla(var(--secondary), 0.45);
-}
-
-.text-gradient {
-  background: linear-gradient(135deg, #ffffff 40%, hsla(210, 40%, 98%, 0.6) 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-}
-
-.text-gradient-purple-teal {
-  background: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--secondary)) 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-}
-
-/* Typography - Inspired by Raleway */
-h1, h2, h3, h4, h5 {
-  font-family: 'Raleway', sans-serif;
-  font-weight: 600;
-  letter-spacing: -0.02em;
-}
-
-/* Utility Buttons - Inspired by AlloCap style submission controls */
-.btn-primary {
-  background: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--secondary)) 100%);
-  color: #fff;
-  border: none;
-  padding: 12px 24px;
-  border-radius: 12px;
-  font-family: 'Raleway', sans-serif;
-  font-weight: 600;
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  box-shadow: 0 4px 20px hsla(var(--primary), 0.35);
-  transition: var(--transition-smooth);
-}
-
-.btn-primary:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 8px 25px hsla(var(--primary), 0.55), 0 0 15px hsla(var(--secondary), 0.3);
-  filter: brightness(1.1);
-}
-
-.btn-primary:active {
-  transform: translateY(0);
-}
-
-.btn-primary:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-  transform: none;
-  box-shadow: none;
-}
-
-.btn-secondary {
-  background: hsla(220, 40%, 16%, 0.45);
-  border: 1px solid hsla(220, 40%, 30%, 0.35);
-  color: hsl(var(--text-primary));
-  padding: 12px 24px;
-  border-radius: 12px;
-  font-family: 'Raleway', sans-serif;
-  font-weight: 500;
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  transition: var(--transition-smooth);
-}
-
-.btn-secondary:hover {
-  background: hsla(220, 40%, 24%, 0.6);
-  border-color: hsla(var(--primary), 0.45);
-}
-
-/* Dashboard Layout */
-.dashboard-grid {
-  display: grid;
-  grid-template-columns: 340px 1fr;
-  gap: 24px;
-  max-width: 1680px;
-  margin: 0 auto;
-  padding: 24px;
-  height: calc(100vh - 80px);
-}
-
-@media (max-width: 1024px) {
-  .dashboard-grid {
-    grid-template-columns: 1fr;
-    height: auto;
-  }
-}
-
+/* Stepper Checklist & Spinning Icons */
 @keyframes spin {
   from {
     transform: rotate(0deg);
@@ -226,9 +100,209 @@ h1, h2, h3, h4, h5 {
   animation: spin 2s linear infinite;
 }
 
-/* Custom interactive delete button hover effects */
+.pulsing-glow {
+  animation: pulse-glow 2s infinite ease-in-out;
+}
+
+@keyframes pulse-glow {
+  0%, 100% {
+    opacity: 0.8;
+  }
+  50% {
+    opacity: 1;
+    filter: brightness(1.1);
+  }
+}
+
+/* Text Gradients */
+.glow-text-primary {
+  color: #015294;
+}
+
+.glow-text-secondary {
+  color: #007E9E;
+}
+
+.text-gradient {
+  color: #323639;
+}
+
+.text-gradient-purple-teal {
+  color: #015294;
+}
+
+/* Typography - Inspired by Raleway */
+h1, h2, h3, h4, h5 {
+  font-family: 'Raleway', sans-serif;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: #203865;
+}
+
+/* UI Buttons */
+.btn-primary {
+  background: #015294;
+  color: #fff;
+  border: 1px solid #004080;
+  padding: 8px 16px;
+  border-radius: 4px;
+  font-family: 'Raleway', sans-serif;
+  font-weight: 600;
+  font-size: 13px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  transition: var(--transition-smooth);
+}
+
+.btn-primary:hover {
+  background: #004080;
+  box-shadow: 0 4px 12px rgba(1, 82, 148, 0.2);
+}
+
+.btn-primary:active {
+  transform: translateY(0);
+}
+
+.btn-primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.btn-secondary {
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  color: #323639;
+  padding: 8px 16px;
+  border-radius: 4px;
+  font-family: 'Raleway', sans-serif;
+  font-weight: 600;
+  font-size: 13px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: var(--transition-smooth);
+}
+
+.btn-secondary:hover {
+  background: #f8fafc;
+  border-color: #94a3b8;
+}
+
+/* Dashboard Layout */
+.dashboard-grid {
+  display: flex;
+  position: relative;
+  width: 100%;
+  height: calc(100vh - 55px - 40px); /* header is 55px, footer is 40px */
+  overflow: hidden;
+}
+
+/* Left Navigation Sidebar style */
+.app-sidebar {
+  width: 240px;
+  background: #ffffff;
+  border-right: 1px solid #cbd5e1;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  flex-shrink: 0;
+  z-index: 10;
+}
+
+/* Slide-out Storage Drawer style */
+.storage-drawer {
+  position: fixed;
+  top: 55px;
+  bottom: 40px;
+  left: 240px;
+  width: 380px;
+  background: #ffffff;
+  border-right: 1px solid #cbd5e1;
+  box-shadow: 10px 0 30px rgba(0, 0, 0, 0.06);
+  z-index: 9;
+  display: flex;
+  flex-direction: column;
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transform: translateX(-100%);
+}
+
+.storage-drawer.open {
+  transform: translateX(0);
+}
+
+/* Main Content Workspace */
+.workspace-content {
+  flex: 1;
+  height: 100%;
+  overflow-y: auto;
+  padding: 24px;
+  background: #f0f2f3;
+  transition: margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Interactive delete button */
 .delete-btn-hover:hover {
-  background-color: rgba(239, 68, 68, 0.15) !important;
-  color: rgb(239, 68, 68) !important;
-  transform: scale(1.05);
+  background-color: #fee2e2 !important;
+  border-color: #fca5a5 !important;
+  color: #dc2626 !important;
+}
+
+/* Navigation items styling */
+.nav-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  color: #323639;
+  text-decoration: none;
+  font-size: 13px;
+  font-weight: 500;
+  border-bottom: 1px solid #f1f5f9;
+  cursor: pointer;
+  transition: all 0.2s;
+  background: transparent;
+  border: none;
+  text-align: left;
+  width: 100%;
+}
+
+.nav-menu-item:hover {
+  background: #f1f5f9;
+  color: #015294;
+}
+
+.nav-sub-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px 8px 32px;
+  color: #4b5563;
+  text-decoration: none;
+  font-size: 12.5px;
+  cursor: pointer;
+  transition: all 0.2s;
+  background: transparent;
+  border: none;
+  text-align: left;
+  width: 100%;
+}
+
+.nav-sub-item:hover {
+  background: #f1f5f9;
+  color: #015294;
+}
+
+.nav-sub-item.active {
+  background: #21874c;
+  color: #ffffff;
+  font-weight: 600;
+  border-radius: 15px;
+  margin: 2px 12px;
+  width: calc(100% - 24px);
 }
