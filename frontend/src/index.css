@@ -114,6 +114,15 @@ body {
   }
 }
 
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0;
+  }
+}
+
 /* Text Gradients */
 .glow-text-primary {
   color: #015294;

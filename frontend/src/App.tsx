@@ -179,7 +179,7 @@ export default function App() {
     if (!text.trim()) {
       return (
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#64748b', fontStyle: 'italic', fontSize: '13px' }}>
-          <RefreshCw size={12} className="spin" style={{ animation: 'spin 2s linear infinite', transformOrigin: 'center', display: 'inline-block', color: '#007E9E' }} />
+          <RefreshCw size={12} className="spin" style={{ animation: 'spin 2s linear infinite', transformOrigin: 'center', display: 'inline-block', color: '#015294' }} />
           <span>Waiting for comparison analysis to stream...</span>
         </div>
       );
@@ -206,30 +206,29 @@ export default function App() {
 
                   const content = parts.map((part, partIdx) => {
                     if (part.startsWith('**') && part.endsWith('**')) {
-                      return <strong key={partIdx} style={{ color: '#fff', fontWeight: 600 }}>{part.slice(2, -2)}</strong>;
+                      return <strong key={partIdx} style={{ color: '#0f172a', fontWeight: 600 }}>{part.slice(2, -2)}</strong>;
                     }
                     if (part.startsWith('**')) {
-                      return <strong key={partIdx} style={{ color: '#fff', fontWeight: 600 }}>{part.slice(2)}</strong>;
+                      return <strong key={partIdx} style={{ color: '#0f172a', fontWeight: 600 }}>{part.slice(2)}</strong>;
                     }
                     return part;
                   });
 
                   return (
                     <div key={itemIdx} style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', paddingLeft: '4px' }}>
-                      <span style={{ color: 'hsl(var(--secondary))', fontSize: '10px', marginTop: '3px', flexShrink: 0 }}>•</span>
-                      <span style={{ fontSize: '13px', color: 'hsla(210, 40%, 98%, 0.85)', lineHeight: 1.4 }}>
+                      <span style={{ color: '#015294', fontSize: '10px', marginTop: '3px', flexShrink: 0 }}>•</span>
+                      <span style={{ fontSize: '13px', color: '#334155', lineHeight: 1.4 }}>
                         {content}
                         {isLastLine && (
                           <span style={{
                             display: 'inline-block',
                             width: '8px',
                             height: '14px',
-                            background: 'hsl(var(--secondary))',
+                            background: '#015294',
                             marginLeft: '6px',
                             verticalAlign: 'middle',
                             animation: 'pulse 1.5s infinite ease-in-out',
-                            borderRadius: '1px',
-                            boxShadow: '0 0 8px hsl(var(--secondary))'
+                            borderRadius: '1px'
                           }} />
                         )}
                       </span>
@@ -265,15 +264,15 @@ export default function App() {
                 <div style={{ 
                   fontSize: '14px', 
                   fontWeight: 600, 
-                  color: 'hsl(var(--secondary))', 
+                  color: '#015294', 
                   display: 'flex', 
                   alignItems: 'center', 
                   gap: '8px',
-                  borderBottom: '1px solid rgba(255,255,255,0.06)',
+                  borderBottom: '1px solid #e2e8f0',
                   paddingBottom: '6px',
                   marginTop: paraIdx > 0 ? '8px' : '0'
                 }}>
-                  <span style={{ width: '3px', height: '14px', background: 'hsl(var(--secondary))', borderRadius: '1.5px', flexShrink: 0 }}></span>
+                  <span style={{ width: '3px', height: '14px', background: '#015294', borderRadius: '1.5px', flexShrink: 0 }}></span>
                   <span>
                     {headerText}
                     {isLastLine && lines.length === 1 && (
@@ -281,12 +280,11 @@ export default function App() {
                         display: 'inline-block',
                         width: '8px',
                         height: '14px',
-                        background: 'hsl(var(--secondary))',
+                        background: '#015294',
                         marginLeft: '6px',
                         verticalAlign: 'middle',
                         animation: 'pulse 1.5s infinite ease-in-out',
-                        borderRadius: '1px',
-                        boxShadow: '0 0 8px hsl(var(--secondary))'
+                        borderRadius: '1px'
                       }} />
                     )}
                   </span>
@@ -297,28 +295,27 @@ export default function App() {
                   
                   const content = parts.map((part, partIdx) => {
                     if (part.startsWith('**') && part.endsWith('**')) {
-                      return <strong key={partIdx} style={{ color: '#fff', fontWeight: 600 }}>{part.slice(2, -2)}</strong>;
+                      return <strong key={partIdx} style={{ color: '#0f172a', fontWeight: 600 }}>{part.slice(2, -2)}</strong>;
                     }
                     if (part.startsWith('**')) {
-                      return <strong key={partIdx} style={{ color: '#fff', fontWeight: 600 }}>{part.slice(2)}</strong>;
+                      return <strong key={partIdx} style={{ color: '#0f172a', fontWeight: 600 }}>{part.slice(2)}</strong>;
                     }
                     return part;
                   });
 
                   return (
-                    <p key={lineIdx} style={{ margin: 0, fontSize: '13px', color: 'hsla(210, 40%, 98%, 0.85)', lineHeight: 1.5 }}>
+                    <p key={lineIdx} style={{ margin: 0, fontSize: '13px', color: '#334155', lineHeight: 1.5 }}>
                       {content}
                       {isLastLineOfAll && (
                         <span style={{
                           display: 'inline-block',
                           width: '8px',
                           height: '14px',
-                          background: 'hsl(var(--secondary))',
+                          background: '#015294',
                           marginLeft: '6px',
                           verticalAlign: 'middle',
                           animation: 'pulse 1.5s infinite ease-in-out',
-                          borderRadius: '1px',
-                          boxShadow: '0 0 8px hsl(var(--secondary))'
+                          borderRadius: '1px'
                         }} />
                       )}
                     </p>
@@ -337,28 +334,27 @@ export default function App() {
 
                 const content = parts.map((part, partIdx) => {
                   if (part.startsWith('**') && part.endsWith('**')) {
-                    return <strong key={partIdx} style={{ color: '#fff', fontWeight: 600 }}>{part.slice(2, -2)}</strong>;
+                    return <strong key={partIdx} style={{ color: '#0f172a', fontWeight: 600 }}>{part.slice(2, -2)}</strong>;
                   }
                   if (part.startsWith('**')) {
-                    return <strong key={partIdx} style={{ color: '#fff', fontWeight: 600 }}>{part.slice(2)}</strong>;
+                    return <strong key={partIdx} style={{ color: '#0f172a', fontWeight: 600 }}>{part.slice(2)}</strong>;
                   }
                   return part;
                 });
 
                 return (
-                  <p key={lineIdx} style={{ margin: 0, fontSize: '13px', color: 'hsla(210, 40%, 98%, 0.85)', lineHeight: 1.5 }}>
+                  <p key={lineIdx} style={{ margin: 0, fontSize: '13px', color: '#334155', lineHeight: 1.5 }}>
                     {content}
                     {isLastLine && (
                       <span style={{
                         display: 'inline-block',
                         width: '8px',
                         height: '14px',
-                        background: 'hsl(var(--secondary))',
+                        background: '#015294',
                         marginLeft: '6px',
                         verticalAlign: 'middle',
                         animation: 'pulse 1.5s infinite ease-in-out',
-                        borderRadius: '1px',
-                        boxShadow: '0 0 8px hsl(var(--secondary))'
+                        borderRadius: '1px'
                       }} />
                     )}
                   </p>
@@ -908,118 +904,126 @@ export default function App() {
                       key={file.filename} 
                       className="glass-card" 
                       style={{ 
-                        padding: '10px 12px', 
+                        padding: '12px 14px', 
                         borderRadius: '6px', 
                         display: 'flex', 
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
+                        flexDirection: 'column',
                         gap: '10px',
                         background: isSelectedA ? 'rgba(1, 82, 148, 0.04)' : isSelectedB ? 'rgba(0, 126, 158, 0.04)' : '#ffffff',
                         borderColor: isSelectedA ? '#015294' : isSelectedB ? '#007E9E' : '#cbd5e1',
-                        boxShadow: isSelectedA ? '0 0 8px rgba(1, 82, 148, 0.1)' : isSelectedB ? '0 0 8px rgba(0, 126, 158, 0.1)' : 'none',
+                        boxShadow: isSelectedA ? '0 2px 8px rgba(1, 82, 148, 0.08)' : isSelectedB ? '0 2px 8px rgba(0, 126, 158, 0.08)' : '0 1px 3px rgba(0,0,0,0.02)',
                         transition: 'all 0.2s'
                       }}
                     >
-                      {/* Left: Icon and wrapped filename */}
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', overflow: 'hidden', flex: 1 }}>
-                        <FileText size={14} style={{ color: isSelectedA ? '#015294' : isSelectedB ? '#007E9E' : '#64748b', flexShrink: 0 }} />
+                      {/* Top: Icon and wrapped filename */}
+                      <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', width: '100%' }}>
+                        <FileText size={15} style={{ color: isSelectedA ? '#015294' : isSelectedB ? '#007E9E' : '#64748b', flexShrink: 0, marginTop: '2px' }} />
                         <div style={{ display: 'flex', flexDirection: 'column', textAlign: 'left', minWidth: 0, flex: 1 }}>
-                          <span style={{ fontSize: '11px', fontWeight: 600, color: '#1e293b', whiteSpace: 'normal', wordBreak: 'break-all', lineHeight: '1.3' }}>
+                          <span style={{ fontSize: '11px', fontWeight: 600, color: '#1e293b', whiteSpace: 'normal', wordBreak: 'break-all', lineHeight: '1.4' }}>
                             {file.displayName}
                           </span>
-                          <span style={{ fontSize: '9.5px', color: '#64748b', marginTop: '2px' }}>{formatBytes(file.size)}</span>
+                          <span style={{ fontSize: '9.5px', color: '#64748b', marginTop: '3px' }}>{formatBytes(file.size)}</span>
                         </div>
                       </div>
                       
-                      {/* Right: Actions */}
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0 }}>
-                        <button
-                          onClick={() => {
-                            setFileA(isSelectedA ? null : file.filename);
-                            if (isSelectedB) setFileB(null);
-                          }}
-                          style={{
-                            padding: '3px 8px',
-                            borderRadius: '12px',
-                            fontSize: '10px',
-                            fontWeight: 700,
-                            cursor: 'pointer',
-                            border: isSelectedA ? 'none' : '1px solid rgba(1, 82, 148, 0.4)',
-                            background: isSelectedA ? '#015294' : 'transparent',
-                            color: isSelectedA ? '#fff' : '#015294',
-                            transition: 'all 0.2s'
-                          }}
-                          title={isSelectedA ? "Unselect Original" : "Set as Original"}
-                        >
-                          Original
-                        </button>
+                      {/* Divider Line */}
+                      <div style={{ borderTop: '1px solid #e2e8f0', margin: '0 -2px' }}></div>
+                      
+                      {/* Bottom: Actions Row */}
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+                        {/* Left: Original / Revised selection pills */}
+                        <div style={{ display: 'flex', gap: '6px' }}>
+                          <button
+                            onClick={() => {
+                              setFileA(isSelectedA ? null : file.filename);
+                              if (isSelectedB) setFileB(null);
+                            }}
+                            style={{
+                              padding: '4px 10px',
+                              borderRadius: '12px',
+                              fontSize: '9.5px',
+                              fontWeight: 700,
+                              cursor: 'pointer',
+                              border: isSelectedA ? 'none' : '1px solid rgba(1, 82, 148, 0.4)',
+                              background: isSelectedA ? '#015294' : 'transparent',
+                              color: isSelectedA ? '#fff' : '#015294',
+                              transition: 'all 0.2s'
+                            }}
+                            title={isSelectedA ? "Unselect Original" : "Set as Original"}
+                          >
+                            Original
+                          </button>
+                          
+                          <button
+                            onClick={() => {
+                              setFileB(isSelectedB ? null : file.filename);
+                              if (isSelectedA) setFileA(null);
+                            }}
+                            style={{
+                              padding: '4px 10px',
+                              borderRadius: '12px',
+                              fontSize: '9.5px',
+                              fontWeight: 700,
+                              cursor: 'pointer',
+                              border: isSelectedB ? 'none' : '1px solid rgba(0, 126, 158, 0.4)',
+                              background: isSelectedB ? '#007E9E' : 'transparent',
+                              color: isSelectedB ? '#fff' : '#007E9E',
+                              transition: 'all 0.2s'
+                            }}
+                            title={isSelectedB ? "Unselect Revised" : "Set as Revised"}
+                          >
+                            Revised
+                          </button>
+                        </div>
                         
-                        <button
-                          onClick={() => {
-                            setFileB(isSelectedB ? null : file.filename);
-                            if (isSelectedA) setFileA(null);
-                          }}
-                          style={{
-                            padding: '3px 8px',
-                            borderRadius: '12px',
-                            fontSize: '10px',
-                            fontWeight: 700,
-                            cursor: 'pointer',
-                            border: isSelectedB ? 'none' : '1px solid rgba(0, 126, 158, 0.4)',
-                            background: isSelectedB ? '#007E9E' : 'transparent',
-                            color: isSelectedB ? '#fff' : '#007E9E',
-                            transition: 'all 0.2s'
-                          }}
-                          title={isSelectedB ? "Unselect Revised" : "Set as Revised"}
-                        >
-                          Revised
-                        </button>
-                        
-                        <a 
-                          href={`${API_BASE}/download/${file.filename}`}
-                          style={{ 
-                            width: '22px',
-                            height: '22px',
-                            borderRadius: '50%',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            background: '#f1f5f9',
-                            border: '1px solid #cbd5e1',
-                            color: '#64748b',
-                            transition: 'all 0.2s',
-                            cursor: 'pointer'
-                          }}
-                          title="Download file"
-                        >
-                          <Download size={10} />
-                        </a>
-                        
-                        <button
-                          onClick={async (e) => {
-                            e.stopPropagation();
-                            if (confirm(`Are you sure you want to delete ${file.displayName}?`)) {
-                              await handleDeleteFile(file.filename);
-                            }
-                          }}
-                          style={{
-                            width: '22px',
-                            height: '22px',
-                            borderRadius: '50%',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            background: '#fef2f2',
-                            border: '1px solid #fee2e2',
-                            color: '#ef4444',
-                            cursor: 'pointer',
-                            transition: 'all 0.2s'
-                          }}
-                          className="delete-btn-hover"
-                          title="Delete document"
-                        >
-                          <Trash2 size={10} />
-                        </button>
+                        {/* Right: Utility download / delete icons */}
+                        <div style={{ display: 'flex', gap: '6px' }}>
+                          <a 
+                            href={`${API_BASE}/download/${file.filename}`}
+                            style={{ 
+                              width: '24px',
+                              height: '24px',
+                              borderRadius: '50%',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              background: '#f1f5f9',
+                              border: '1px solid #cbd5e1',
+                              color: '#64748b',
+                              transition: 'all 0.2s',
+                              cursor: 'pointer'
+                            }}
+                            title="Download file"
+                          >
+                            <Download size={11} />
+                          </a>
+                          
+                          <button
+                            onClick={async (e) => {
+                              e.stopPropagation();
+                              if (confirm(`Are you sure you want to delete ${file.displayName}?`)) {
+                                await handleDeleteFile(file.filename);
+                              }
+                            }}
+                            style={{
+                              width: '24px',
+                              height: '24px',
+                              borderRadius: '50%',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              background: '#fef2f2',
+                              border: '1px solid #fee2e2',
+                              color: '#ef4444',
+                              cursor: 'pointer',
+                              transition: 'all 0.2s'
+                            }}
+                            className="delete-btn-hover"
+                            title="Delete document"
+                          >
+                            <Trash2 size={11} />
+                          </button>
+                        </div>
                       </div>
                     </div>
                   );
@@ -1155,7 +1159,7 @@ export default function App() {
             
             {/* 1. Loading Panel */}
             {isLoading && (
-              <div style={{ position: 'absolute', inset: 0, background: 'rgba(240, 242, 243, 0.96)', backdropFilter: 'blur(8px)', zIndex: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px', borderRadius: 'var(--border-radius)' }}>
+              <div style={{ position: 'absolute', inset: 0, background: 'rgba(255, 255, 255, 0.96)', backdropFilter: 'blur(8px)', zIndex: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px', borderRadius: 'var(--border-radius)' }}>
                 <div style={{ maxWidth: '860px', width: '100%', display: 'grid', gridTemplateColumns: '1fr 1.2fr', gap: '32px', alignItems: 'start' }}>
                   
                   {/* Left: Progress stepper */}
@@ -1174,7 +1178,7 @@ export default function App() {
                       </div>
                     </div>
 
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', textAlign: 'left', background: '#ffffff', border: '1px solid #cbd5e1', padding: '20px', borderRadius: '6px' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', textAlign: 'left', background: '#f8fafc', border: '1px solid #cbd5e1', padding: '20px', borderRadius: '6px', boxShadow: 'inset 0 1px 3px rgba(0,0,0,0.02)' }}>
                       {[
                         "Initializing Original Document...",
                         "Initializing Revised Document...",
@@ -1203,19 +1207,19 @@ export default function App() {
 
                   {/* Right: Console thoughts */}
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', textAlign: 'left', width: '100%' }}>
-                    <div style={{ fontSize: '11px', textTransform: 'uppercase', color: '#007E9E', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px', letterSpacing: '0.5px' }}>
-                      <RefreshCw size={12} className="spin" style={{ color: '#007E9E' }} /> Comparison Analysis Log
+                    <div style={{ fontSize: '11px', textTransform: 'uppercase', color: '#015294', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px', letterSpacing: '0.5px' }}>
+                      <RefreshCw size={12} className="spin" style={{ color: '#015294' }} /> Comparison Analysis Log
                     </div>
                     <div 
                       ref={thinkingConsoleRef}
                       style={{ 
-                        background: '#0f172a', 
-                        border: '1px solid #334155', 
+                        background: '#f8fafc', 
+                        border: '1px solid #cbd5e1', 
                         padding: '16px', 
                         borderRadius: '6px', 
                         height: '320px', 
                         overflowY: 'auto', 
-                        boxShadow: 'inset 0 2px 8px rgba(0,0,0,0.2)',
+                        boxShadow: 'inset 0 2px 8px rgba(0,0,0,0.05)',
                         display: 'flex',
                         flexDirection: 'column'
                       }}
@@ -1230,19 +1234,25 @@ export default function App() {
 
             {/* 2. Welcome State */}
             {!report && !isLoading && (
-              <div className="glass-card" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '40px', gap: '20px', textAlign: 'center' }}>
-                <div style={{ width: '70px', height: '70px', borderRadius: '18px', background: 'rgba(1, 82, 148, 0.05)', border: '1px solid rgba(1, 82, 148, 0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '8px' }} className="pulsing-glow">
+              <div className="glass-card" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '40px', gap: '24px', textAlign: 'center' }}>
+                <div style={{ width: '70px', height: '70px', borderRadius: '18px', background: 'rgba(1, 82, 148, 0.05)', border: '1px solid rgba(1, 82, 148, 0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '4px' }} className="pulsing-glow">
                   <FileCheck size={36} style={{ color: '#015294' }} />
                 </div>
-                <div style={{ maxWidth: '520px' }}>
-                  <h2 style={{ fontSize: '20px', color: '#203865', marginBottom: '8px' }}>Automated Comparison Workspace</h2>
-                  <p style={{ fontSize: '13px', color: '#64748b', lineHeight: 1.6 }}>
-                    Select the **Original Document** and **Revised Document** from the dropdowns above (or upload new files in the **Document Storage** drawer on the left), then click **Compare Documents** to run the comparison.
-                  </p>
+                
+                <div style={{ maxWidth: '600px' }}>
+                  <h2 style={{ fontSize: '20px', color: '#203865', marginBottom: '12px' }}>Automated Comparison Workspace</h2>
+                  
+                  {/* Premium Highlight Card for Instructions */}
+                  <div style={{ background: '#f8fafc', border: '1px solid #cbd5e1', borderRadius: '8px', padding: '16px 20px', textAlign: 'left', display: 'flex', gap: '14px', alignItems: 'flex-start', boxShadow: 'inset 0 1px 3px rgba(0,0,0,0.02)' }}>
+                    <div style={{ background: '#015294', color: '#fff', width: '24px', height: '24px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: 'bold', flexShrink: 0, marginTop: '2px' }}>i</div>
+                    <p style={{ fontSize: '13px', color: '#475569', lineHeight: 1.5, margin: 0 }}>
+                      Select the <strong style={{ color: '#015294' }}>Original Document</strong> and <strong style={{ color: '#007E9E' }}>Revised Document</strong> from the dropdowns above (or upload new files in the <strong style={{ color: '#334155' }}>Document Storage</strong> drawer on the left), then click <strong style={{ color: '#015294' }}>Compare Documents</strong> to run the comparison.
+                    </p>
+                  </div>
                 </div>
                 
                 {/* Feature details grid */}
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px', width: '100%', maxWidth: '780px', marginTop: '16px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px', width: '100%', maxWidth: '780px', marginTop: '8px' }}>
                   <div className="glass-card" style={{ padding: '16px', textAlign: 'left', background: '#f8fafc' }}>
                     <FileText size={20} style={{ color: '#015294', marginBottom: '8px' }} />
                     <h4 style={{ fontSize: '13px', color: '#203865', marginBottom: '4px' }}>Text Comparison</h4>
