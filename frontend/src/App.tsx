@@ -66,6 +66,129 @@ interface ChatMessage {
   content: string;
 }
 
+interface DiffSegment {
+  type: 'added' | 'removed' | 'common';
+  text: string;
+}
+
+// LCS word diff helper
+const computeWordDiff = (original: string, revised: string): { originalSegments: DiffSegment[], revisedSegments: DiffSegment[] } => {
+  const normOriginal = original || '';
+  const normRevised = revised || '';
+
+  if (!normOriginal) {
+    return {
+      originalSegments: [],
+      revisedSegments: [{ type: 'added', text: normRevised }]
+    };
+  }
+  if (!normRevised) {
+    return {
+      originalSegments: [{ type: 'removed', text: normOriginal }],
+      revisedSegments: []
+    };
+  }
+
+  // Tokenize by word boundary or space/punctuation
+  const tokenize = (str: string) => {
+    return str.match(/\w+|[^\w\s]|\s+/g) || [];
+  };
+
+  const words1 = tokenize(normOriginal);
+  const words2 = tokenize(normRevised);
+
+  const n = words1.length;
+  const m = words2.length;
+  
+  // DP table
+  const dp: number[][] = Array.from({ length: n + 1 }, () => Array(m + 1).fill(0));
+
+  for (let i = 1; i <= n; i++) {
+    for (let j = 1; j <= m; j++) {
+      if (words1[i - 1].toLowerCase().trim() === words2[j - 1].toLowerCase().trim()) {
+        dp[i][j] = dp[i - 1][j - 1] + 1;
+      } else {
+        dp[i][j] = Math.max(dp[i - 1][j], dp[i][j - 1]);
+      }
+    }
+  }
+
+  const originalSegments: DiffSegment[] = [];
+  const revisedSegments: DiffSegment[] = [];
+
+  let i = n;
+  let j = m;
+
+  while (i > 0 || j > 0) {
+    if (i > 0 && j > 0 && words1[i - 1].toLowerCase().trim() === words2[j - 1].toLowerCase().trim()) {
+      const text = words1[i - 1];
+      originalSegments.unshift({ type: 'common', text });
+      revisedSegments.unshift({ type: 'common', text });
+      i--;
+      j--;
+    } else if (j > 0 && (i === 0 || dp[i][j - 1] >= dp[i - 1][j])) {
+      revisedSegments.unshift({ type: 'added', text: words2[j - 1] });
+      j--;
+    } else {
+      originalSegments.unshift({ type: 'removed', text: words1[i - 1] });
+      i--;
+    }
+  }
+
+  const mergeSegments = (segs: DiffSegment[]) => {
+    const merged: DiffSegment[] = [];
+    for (const seg of segs) {
+      if (merged.length > 0 && merged[merged.length - 1].type === seg.type) {
+        merged[merged.length - 1].text += seg.text;
+      } else {
+        merged.push({ ...seg });
+      }
+    }
+    return merged;
+  };
+
+  return {
+    originalSegments: mergeSegments(originalSegments),
+    revisedSegments: mergeSegments(revisedSegments)
+  };
+};
+
+const renderOriginalDiffText = (origText: string, revText: string) => {
+  const { originalSegments } = computeWordDiff(origText, revText);
+  return (
+    <div style={{ fontFamily: "'Plus Jakarta Sans', system-ui, -apple-system, sans-serif", fontSize: '12.5px', lineHeight: '1.6', whiteSpace: 'pre-wrap', color: '#334155' }}>
+      {originalSegments.map((seg, idx) => {
+        if (seg.type === 'removed') {
+          return (
+            <span key={idx} style={{ background: '#ffe2e2', color: '#b91c1c', textDecoration: 'line-through', padding: '1px 3px', borderRadius: '2px', fontWeight: 600 }}>
+              {seg.text}
+            </span>
+          );
+        }
+        return <span key={idx}>{seg.text}</span>;
+      })}
+    </div>
+  );
+};
+
+const renderRevisedDiffText = (origText: string, revText: string) => {
+  const { revisedSegments } = computeWordDiff(origText, revText);
+  return (
+    <div style={{ fontFamily: "'Plus Jakarta Sans', system-ui, -apple-system, sans-serif", fontSize: '12.5px', lineHeight: '1.6', whiteSpace: 'pre-wrap', color: '#334155' }}>
+      {revisedSegments.map((seg, idx) => {
+        if (seg.type === 'added') {
+          return (
+            <span key={idx} style={{ background: '#dcfce7', color: '#15803d', padding: '1px 3px', borderRadius: '2px', fontWeight: 600 }}>
+              {seg.text}
+            </span>
+          );
+        }
+        return <span key={idx}>{seg.text}</span>;
+      })}
+    </div>
+  );
+};
+
 // Mock comparison data for demo mode when API Key is missing
 const mockReport: ComparisonReport = {
   overallSummary: "A detailed comparison was performed between the two lease agreements. Key modifications include a 15% increase in the security deposit, updated late payment fees, and structural changes to the utility cost breakdown table. The landlord's logo has also been updated, and an additional page layout section was inserted on page 4.",
@@ -1375,7 +1498,7 @@ export default function App() {
                       ) : (
                         report.textChanges.map((change, index) => (
                           <div key={index} className="glass-card" style={{ padding: '16px', borderLeft: `4px solid ${getSeverityColor(change.severity)}` }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
                               <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                                 <span style={{ fontSize: '11px', padding: '2px 6px', borderRadius: '4px', background: '#e2e8f0', fontWeight: 700, color: '#334155' }}>Page {change.page}</span>
                                 <span style={{ fontSize: '10px', textTransform: 'uppercase', fontWeight: 700, color: change.type === 'added' ? '#21874c' : change.type === 'deleted' ? '#ef4444' : '#007E9E' }}>
@@ -1385,26 +1508,38 @@ export default function App() {
                               <span style={{ fontSize: '10px', textTransform: 'uppercase', color: getSeverityColor(change.severity), fontWeight: 700 }}>{change.severity} risk</span>
                             </div>
                             
-                            <p style={{ fontSize: '13px', fontWeight: 700, color: '#1e293b', marginBottom: '10px' }}>{change.description}</p>
+                            {/* Highlighted one-sentence description */}
+                            <div style={{ 
+                              padding: '8px 12px', 
+                              background: '#f8fafc', 
+                              borderLeft: `3px solid ${getSeverityColor(change.severity)}`, 
+                              borderRadius: '0 4px 4px 0', 
+                              marginBottom: '14px',
+                              boxShadow: 'inset 0 1px 2px rgba(0,0,0,0.01)'
+                            }}>
+                              <p style={{ fontSize: '13px', fontWeight: 600, color: '#1e293b', margin: 0, lineHeight: 1.4 }}>
+                                {change.description}
+                              </p>
+                            </div>
                             
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', fontSize: '11.5px' }}>
                               {/* Before (Original) */}
-                              <div style={{ padding: '10px', background: change.type === 'added' ? 'transparent' : '#fef2f2', border: change.type === 'added' ? '1px dashed #cbd5e1' : '1px solid #fee2e2', borderRadius: '4px', display: 'flex', flexDirection: 'column' }}>
-                                <div style={{ fontSize: '9px', textTransform: 'uppercase', color: change.type === 'added' ? '#64748b' : '#ef4444', fontWeight: 700, marginBottom: '4px' }}>Before (Original)</div>
+                              <div style={{ padding: '12px', background: change.type === 'added' ? 'transparent' : '#fef2f2', border: change.type === 'added' ? '1px dashed #cbd5e1' : '1px solid #fee2e2', borderRadius: '6px', display: 'flex', flexDirection: 'column' }}>
+                                <div style={{ fontSize: '9px', textTransform: 'uppercase', color: change.type === 'added' ? '#64748b' : '#ef4444', fontWeight: 700, marginBottom: '6px' }}>Before (Original)</div>
                                 {change.type === 'added' ? (
-                                  <div style={{ color: '#94a3b8', fontStyle: 'italic', margin: 'auto 0' }}>[No text existed in original document]</div>
+                                  <div style={{ color: '#94a3b8', fontStyle: 'italic', margin: 'auto 0', fontFamily: "'Plus Jakarta Sans', system-ui, -apple-system, sans-serif", fontSize: '12px' }}>[No text existed in original document]</div>
                                 ) : (
-                                  <div style={{ fontFamily: 'monospace', whiteSpace: 'pre-wrap', color: '#1e293b' }}>{change.originalText}</div>
+                                  renderOriginalDiffText(change.originalText || '', change.revisedText || '')
                                 )}
                               </div>
                               
                               {/* After (Revised) */}
-                              <div style={{ padding: '10px', background: change.type === 'deleted' ? 'transparent' : '#f0fdf4', border: change.type === 'deleted' ? '1px dashed #cbd5e1' : '1px solid #dcfce7', borderRadius: '4px', display: 'flex', flexDirection: 'column' }}>
-                                <div style={{ fontSize: '9px', textTransform: 'uppercase', color: change.type === 'deleted' ? '#64748b' : '#21874c', fontWeight: 700, marginBottom: '4px' }}>After (Revised)</div>
+                              <div style={{ padding: '12px', background: change.type === 'deleted' ? 'transparent' : '#f0fdf4', border: change.type === 'deleted' ? '1px dashed #cbd5e1' : '1px solid #dcfce7', borderRadius: '6px', display: 'flex', flexDirection: 'column' }}>
+                                <div style={{ fontSize: '9px', textTransform: 'uppercase', color: change.type === 'deleted' ? '#64748b' : '#21874c', fontWeight: 700, marginBottom: '6px' }}>After (Revised)</div>
                                 {change.type === 'deleted' ? (
-                                  <div style={{ color: '#94a3b8', fontStyle: 'italic', margin: 'auto 0' }}>[Clause deleted in revised document]</div>
+                                  <div style={{ color: '#94a3b8', fontStyle: 'italic', margin: 'auto 0', fontFamily: "'Plus Jakarta Sans', system-ui, -apple-system, sans-serif", fontSize: '12px' }}>[Clause deleted in revised document]</div>
                                 ) : (
-                                  <div style={{ fontFamily: 'monospace', whiteSpace: 'pre-wrap', color: '#1e293b' }}>{change.revisedText}</div>
+                                  renderRevisedDiffText(change.originalText || '', change.revisedText || '')
                                 )}
                               </div>
                             </div>
@@ -1422,7 +1557,7 @@ export default function App() {
                       ) : (
                         report.tableChanges.map((change, index) => (
                           <div key={index} className="glass-card" style={{ padding: '16px', borderLeft: `4px solid ${getSeverityColor(change.severity)}` }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
                               <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                                 <span style={{ fontSize: '11px', padding: '2px 6px', borderRadius: '4px', background: '#e2e8f0', fontWeight: 700, color: '#334155' }}>Page {change.page}</span>
                                 <span style={{ fontSize: '12px', fontWeight: 700, color: '#203865' }}>{change.tableName}</span>
@@ -1433,26 +1568,38 @@ export default function App() {
                               <span style={{ fontSize: '10px', textTransform: 'uppercase', color: getSeverityColor(change.severity), fontWeight: 700 }}>{change.severity} risk</span>
                             </div>
                             
-                            <p style={{ fontSize: '13px', fontWeight: 700, color: '#1e293b', marginBottom: '10px' }}>{change.description}</p>
+                            {/* Highlighted one-sentence description */}
+                            <div style={{ 
+                              padding: '8px 12px', 
+                              background: '#f8fafc', 
+                              borderLeft: `3px solid ${getSeverityColor(change.severity)}`, 
+                              borderRadius: '0 4px 4px 0', 
+                              marginBottom: '14px',
+                              boxShadow: 'inset 0 1px 2px rgba(0,0,0,0.01)'
+                            }}>
+                              <p style={{ fontSize: '13px', fontWeight: 600, color: '#1e293b', margin: 0, lineHeight: 1.4 }}>
+                                {change.description}
+                              </p>
+                            </div>
                             
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', fontSize: '11.5px' }}>
                               {/* Before (Original) */}
-                              <div style={{ padding: '10px', background: !change.originalText ? 'transparent' : '#fef2f2', border: !change.originalText ? '1px dashed #cbd5e1' : '1px solid #fee2e2', borderRadius: '4px', display: 'flex', flexDirection: 'column' }}>
-                                <div style={{ fontSize: '9px', textTransform: 'uppercase', color: !change.originalText ? '#64748b' : '#ef4444', fontWeight: 700, marginBottom: '4px' }}>Before (Original Table)</div>
+                              <div style={{ padding: '12px', background: !change.originalText ? 'transparent' : '#fef2f2', border: !change.originalText ? '1px dashed #cbd5e1' : '1px solid #fee2e2', borderRadius: '6px', display: 'flex', flexDirection: 'column' }}>
+                                <div style={{ fontSize: '9px', textTransform: 'uppercase', color: !change.originalText ? '#64748b' : '#ef4444', fontWeight: 700, marginBottom: '6px' }}>Before (Original Table)</div>
                                 {!change.originalText ? (
-                                  <div style={{ color: '#94a3b8', fontStyle: 'italic', margin: 'auto 0' }}>[No entry existed in original table]</div>
+                                  <div style={{ color: '#94a3b8', fontStyle: 'italic', margin: 'auto 0', fontFamily: "'Plus Jakarta Sans', system-ui, -apple-system, sans-serif", fontSize: '12px' }}>[No entry existed in original table]</div>
                                 ) : (
-                                  <div style={{ fontFamily: 'monospace', whiteSpace: 'pre-wrap', color: '#1e293b' }}>{change.originalText}</div>
+                                  renderOriginalDiffText(change.originalText || '', change.revisedText || '')
                                 )}
                               </div>
                               
                               {/* After (Revised) */}
-                              <div style={{ padding: '10px', background: !change.revisedText ? 'transparent' : '#f0fdf4', border: !change.revisedText ? '1px dashed #cbd5e1' : '1px solid #dcfce7', borderRadius: '4px', display: 'flex', flexDirection: 'column' }}>
-                                <div style={{ fontSize: '9px', textTransform: 'uppercase', color: !change.revisedText ? '#64748b' : '#21874c', fontWeight: 700, marginBottom: '4px' }}>After (Revised Table)</div>
+                              <div style={{ padding: '12px', background: !change.revisedText ? 'transparent' : '#f0fdf4', border: !change.revisedText ? '1px dashed #cbd5e1' : '1px solid #dcfce7', borderRadius: '6px', display: 'flex', flexDirection: 'column' }}>
+                                <div style={{ fontSize: '9px', textTransform: 'uppercase', color: !change.revisedText ? '#64748b' : '#21874c', fontWeight: 700, marginBottom: '6px' }}>After (Revised Table)</div>
                                 {!change.revisedText ? (
-                                  <div style={{ color: '#94a3b8', fontStyle: 'italic', margin: 'auto 0' }}>[Row/cell deleted in revised table]</div>
+                                  <div style={{ color: '#94a3b8', fontStyle: 'italic', margin: 'auto 0', fontFamily: "'Plus Jakarta Sans', system-ui, -apple-system, sans-serif", fontSize: '12px' }}>[Row/cell deleted in revised table]</div>
                                 ) : (
-                                  <div style={{ fontFamily: 'monospace', whiteSpace: 'pre-wrap', color: '#1e293b' }}>{change.revisedText}</div>
+                                  renderRevisedDiffText(change.originalText || '', change.revisedText || '')
                                 )}
                               </div>
                             </div>
@@ -1470,7 +1617,7 @@ export default function App() {
                       ) : (
                         report.visualChanges.map((change, index) => (
                           <div key={index} className="glass-card" style={{ padding: '16px', borderLeft: `4px solid ${getSeverityColor(change.severity)}` }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
                               <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                                 <span style={{ fontSize: '11px', padding: '2px 6px', borderRadius: '4px', background: '#e2e8f0', fontWeight: 700, color: '#334155' }}>Page {change.page}</span>
                                 <span style={{ fontSize: '11px', fontWeight: 700, color: '#21874c', textTransform: 'uppercase' }}>{change.type.replace('_', ' ')}</span>
@@ -1478,26 +1625,38 @@ export default function App() {
                               <span style={{ fontSize: '10px', textTransform: 'uppercase', color: getSeverityColor(change.severity), fontWeight: 700 }}>{change.severity} risk</span>
                             </div>
                             
-                            <p style={{ fontSize: '13px', fontWeight: 700, color: '#1e293b', marginBottom: '10px' }}>{change.description}</p>
+                            {/* Highlighted one-sentence description */}
+                            <div style={{ 
+                              padding: '8px 12px', 
+                              background: '#f8fafc', 
+                              borderLeft: `3px solid ${getSeverityColor(change.severity)}`, 
+                              borderRadius: '0 4px 4px 0', 
+                              marginBottom: '14px',
+                              boxShadow: 'inset 0 1px 2px rgba(0,0,0,0.01)'
+                            }}>
+                              <p style={{ fontSize: '13px', fontWeight: 600, color: '#1e293b', margin: 0, lineHeight: 1.4 }}>
+                                {change.description}
+                              </p>
+                            </div>
                             
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', fontSize: '11.5px' }}>
                               {/* Before (Original) */}
-                              <div style={{ padding: '10px', background: !change.originalText ? 'transparent' : '#fef2f2', border: !change.originalText ? '1px dashed #cbd5e1' : '1px solid #fee2e2', borderRadius: '4px', display: 'flex', flexDirection: 'column' }}>
-                                <div style={{ fontSize: '9px', textTransform: 'uppercase', color: !change.originalText ? '#64748b' : '#ef4444', fontWeight: 700, marginBottom: '4px' }}>Before (Original Visual Layout)</div>
+                              <div style={{ padding: '12px', background: !change.originalText ? 'transparent' : '#fef2f2', border: !change.originalText ? '1px dashed #cbd5e1' : '1px solid #fee2e2', borderRadius: '6px', display: 'flex', flexDirection: 'column' }}>
+                                <div style={{ fontSize: '9px', textTransform: 'uppercase', color: !change.originalText ? '#64748b' : '#ef4444', fontWeight: 700, marginBottom: '6px' }}>Before (Original Visual Layout)</div>
                                 {!change.originalText ? (
-                                  <div style={{ color: '#94a3b8', fontStyle: 'italic', margin: 'auto 0' }}>[No visual element in original layout]</div>
+                                  <div style={{ color: '#94a3b8', fontStyle: 'italic', margin: 'auto 0', fontFamily: "'Plus Jakarta Sans', system-ui, -apple-system, sans-serif", fontSize: '12px' }}>[No visual element in original layout]</div>
                                 ) : (
-                                  <div style={{ fontFamily: 'monospace', whiteSpace: 'pre-wrap', color: '#1e293b' }}>{change.originalText}</div>
+                                  renderOriginalDiffText(change.originalText || '', change.revisedText || '')
                                 )}
                               </div>
                               
                               {/* After (Revised) */}
-                              <div style={{ padding: '10px', background: !change.revisedText ? 'transparent' : '#f0fdf4', border: !change.revisedText ? '1px dashed #cbd5e1' : '1px solid #dcfce7', borderRadius: '4px', display: 'flex', flexDirection: 'column' }}>
-                                <div style={{ fontSize: '9px', textTransform: 'uppercase', color: !change.revisedText ? '#64748b' : '#21874c', fontWeight: 700, marginBottom: '4px' }}>After (Revised Visual Layout)</div>
+                              <div style={{ padding: '12px', background: !change.revisedText ? 'transparent' : '#f0fdf4', border: !change.revisedText ? '1px dashed #cbd5e1' : '1px solid #dcfce7', borderRadius: '6px', display: 'flex', flexDirection: 'column' }}>
+                                <div style={{ fontSize: '9px', textTransform: 'uppercase', color: !change.revisedText ? '#64748b' : '#21874c', fontWeight: 700, marginBottom: '6px' }}>After (Revised Visual Layout)</div>
                                 {!change.revisedText ? (
-                                  <div style={{ color: '#94a3b8', fontStyle: 'italic', margin: 'auto 0' }}>[Visual element deleted in revised layout]</div>
+                                  <div style={{ color: '#94a3b8', fontStyle: 'italic', margin: 'auto 0', fontFamily: "'Plus Jakarta Sans', system-ui, -apple-system, sans-serif", fontSize: '12px' }}>[Visual element deleted in revised layout]</div>
                                 ) : (
-                                  <div style={{ fontFamily: 'monospace', whiteSpace: 'pre-wrap', color: '#1e293b' }}>{change.revisedText}</div>
+                                  renderRevisedDiffText(change.originalText || '', change.revisedText || '')
                                 )}
                               </div>
                             </div>
