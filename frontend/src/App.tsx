@@ -172,6 +172,203 @@ export default function App() {
 
   const [loadingStep, setLoadingStep] = useState(0);
 
+  // Helper to format streaming markdown/plain-text thoughts into beautiful HTML
+  const renderFormattedThinking = (text: string) => {
+    if (!text.trim()) {
+      return (
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'hsl(var(--text-muted))', fontStyle: 'italic', fontSize: '13px' }}>
+          <RefreshCw size={12} className="spin" style={{ animation: 'spin 2s linear infinite', transformOrigin: 'center', display: 'inline-block' }} />
+          <span>Waiting for agent reasoning logs to stream...</span>
+        </div>
+      );
+    }
+
+    // Split into paragraphs by double line breaks
+    const paragraphs = text.split(/\n\s*\n/);
+
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+        {paragraphs.map((para, paraIdx) => {
+          const trimmedPara = para.trim();
+          if (!trimmedPara) return null;
+
+          // Check if paragraph is a list
+          if (trimmedPara.startsWith('- ') || trimmedPara.startsWith('* ')) {
+            const items = trimmedPara.split('\n');
+            return (
+              <div key={paraIdx} style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                {items.map((item, itemIdx) => {
+                  const cleanedItem = item.trim().replace(/^[-*]\s*/, '');
+                  const parts = cleanedItem.split(/(\*\*.*?\*\*)/g);
+                  const isLastLine = paraIdx === paragraphs.length - 1 && itemIdx === items.length - 1;
+
+                  const content = parts.map((part, partIdx) => {
+                    if (part.startsWith('**') && part.endsWith('**')) {
+                      return <strong key={partIdx} style={{ color: '#fff', fontWeight: 600 }}>{part.slice(2, -2)}</strong>;
+                    }
+                    if (part.startsWith('**')) {
+                      return <strong key={partIdx} style={{ color: '#fff', fontWeight: 600 }}>{part.slice(2)}</strong>;
+                    }
+                    return part;
+                  });
+
+                  return (
+                    <div key={itemIdx} style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', paddingLeft: '4px' }}>
+                      <span style={{ color: 'hsl(var(--secondary))', fontSize: '10px', marginTop: '3px', flexShrink: 0 }}>•</span>
+                      <span style={{ fontSize: '13px', color: 'hsla(210, 40%, 98%, 0.85)', lineHeight: 1.4 }}>
+                        {content}
+                        {isLastLine && (
+                          <span style={{
+                            display: 'inline-block',
+                            width: '8px',
+                            height: '14px',
+                            background: 'hsl(var(--secondary))',
+                            marginLeft: '6px',
+                            verticalAlign: 'middle',
+                            animation: 'pulse 1.5s infinite ease-in-out',
+                            borderRadius: '1px',
+                            boxShadow: '0 0 8px hsl(var(--secondary))'
+                          }} />
+                        )}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            );
+          }
+
+          // Check if paragraph is a single line header
+          const lines = trimmedPara.split('\n');
+          const firstLine = lines[0].trim();
+          
+          let isHeader = false;
+          let headerText = '';
+          
+          if (firstLine.startsWith('#')) {
+            isHeader = true;
+            headerText = firstLine.replace(/^#+\s*/, '');
+          } else if (firstLine.startsWith('**') && firstLine.endsWith('**') && lines.length === 1) {
+            isHeader = true;
+            headerText = firstLine.slice(2, -2);
+          } else if (firstLine.startsWith('**') && !firstLine.includes('**', 2) && lines.length === 1) {
+            isHeader = true;
+            headerText = firstLine.slice(2);
+          }
+
+          if (isHeader) {
+            const isLastLine = paraIdx === paragraphs.length - 1;
+            return (
+              <div key={paraIdx} style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <div style={{ 
+                  fontSize: '14px', 
+                  fontWeight: 600, 
+                  color: 'hsl(var(--secondary))', 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  gap: '8px',
+                  borderBottom: '1px solid rgba(255,255,255,0.06)',
+                  paddingBottom: '6px',
+                  marginTop: paraIdx > 0 ? '8px' : '0'
+                }}>
+                  <span style={{ width: '3px', height: '14px', background: 'hsl(var(--secondary))', borderRadius: '1.5px', flexShrink: 0 }}></span>
+                  <span>
+                    {headerText}
+                    {isLastLine && lines.length === 1 && (
+                      <span style={{
+                        display: 'inline-block',
+                        width: '8px',
+                        height: '14px',
+                        background: 'hsl(var(--secondary))',
+                        marginLeft: '6px',
+                        verticalAlign: 'middle',
+                        animation: 'pulse 1.5s infinite ease-in-out',
+                        borderRadius: '1px',
+                        boxShadow: '0 0 8px hsl(var(--secondary))'
+                      }} />
+                    )}
+                  </span>
+                </div>
+                {lines.slice(1).map((line, lineIdx) => {
+                  const parts = line.split(/(\*\*.*?\*\*)/g);
+                  const isLastLineOfAll = paraIdx === paragraphs.length - 1 && lineIdx === lines.length - 2;
+                  
+                  const content = parts.map((part, partIdx) => {
+                    if (part.startsWith('**') && part.endsWith('**')) {
+                      return <strong key={partIdx} style={{ color: '#fff', fontWeight: 600 }}>{part.slice(2, -2)}</strong>;
+                    }
+                    if (part.startsWith('**')) {
+                      return <strong key={partIdx} style={{ color: '#fff', fontWeight: 600 }}>{part.slice(2)}</strong>;
+                    }
+                    return part;
+                  });
+
+                  return (
+                    <p key={lineIdx} style={{ margin: 0, fontSize: '13px', color: 'hsla(210, 40%, 98%, 0.85)', lineHeight: 1.5 }}>
+                      {content}
+                      {isLastLineOfAll && (
+                        <span style={{
+                          display: 'inline-block',
+                          width: '8px',
+                          height: '14px',
+                          background: 'hsl(var(--secondary))',
+                          marginLeft: '6px',
+                          verticalAlign: 'middle',
+                          animation: 'pulse 1.5s infinite ease-in-out',
+                          borderRadius: '1px',
+                          boxShadow: '0 0 8px hsl(var(--secondary))'
+                        }} />
+                      )}
+                    </p>
+                  );
+                })}
+              </div>
+            );
+          }
+
+          // Default paragraph rendering
+          return (
+            <div key={paraIdx} style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              {lines.map((line, lineIdx) => {
+                const parts = line.split(/(\*\*.*?\*\*)/g);
+                const isLastLine = paraIdx === paragraphs.length - 1 && lineIdx === lines.length - 1;
+
+                const content = parts.map((part, partIdx) => {
+                  if (part.startsWith('**') && part.endsWith('**')) {
+                    return <strong key={partIdx} style={{ color: '#fff', fontWeight: 600 }}>{part.slice(2, -2)}</strong>;
+                  }
+                  if (part.startsWith('**')) {
+                    return <strong key={partIdx} style={{ color: '#fff', fontWeight: 600 }}>{part.slice(2)}</strong>;
+                  }
+                  return part;
+                });
+
+                return (
+                  <p key={lineIdx} style={{ margin: 0, fontSize: '13px', color: 'hsla(210, 40%, 98%, 0.85)', lineHeight: 1.5 }}>
+                    {content}
+                    {isLastLine && (
+                      <span style={{
+                        display: 'inline-block',
+                        width: '8px',
+                        height: '14px',
+                        background: 'hsl(var(--secondary))',
+                        marginLeft: '6px',
+                        verticalAlign: 'middle',
+                        animation: 'pulse 1.5s infinite ease-in-out',
+                        borderRadius: '1px',
+                        boxShadow: '0 0 8px hsl(var(--secondary))'
+                      }} />
+                    )}
+                  </p>
+                );
+              })}
+            </div>
+          );
+        })}
+      </div>
+    );
+  };
+
   // Auto-scroll thinking console to bottom
   useEffect(() => {
     if (thinkingConsoleRef.current) {
@@ -709,21 +906,20 @@ export default function App() {
                   <div 
                     ref={thinkingConsoleRef}
                     style={{ 
-                      fontFamily: 'monospace', 
-                      fontSize: '12px', 
-                      background: 'rgba(0, 0, 0, 0.45)', 
-                      border: '1px solid hsla(190, 90%, 50%, 0.15)', 
-                      padding: '16px', 
-                      borderRadius: '12px', 
-                      color: 'hsl(190, 90%, 80%)', 
+                      fontSize: '13px', 
+                      background: 'radial-gradient(circle at 100% 0%, hsla(263, 90%, 50%, 0.06) 0%, hsla(190, 90%, 50%, 0.03) 50%, hsla(224, 71%, 4%, 0.65) 100%)', 
+                      border: '1px solid hsla(263, 90%, 50%, 0.25)', 
+                      padding: '20px', 
+                      borderRadius: '16px', 
                       height: '350px', 
                       overflowY: 'auto', 
-                      whiteSpace: 'pre-wrap',
-                      boxShadow: 'inset 0 0 15px rgba(0,0,0,0.6)',
-                      lineHeight: 1.5
+                      boxShadow: 'inset 0 0 20px rgba(0,0,0,0.5), 0 8px 32px rgba(0,0,0,0.4)',
+                      backdropFilter: 'blur(8px)',
+                      display: 'flex',
+                      flexDirection: 'column'
                     }}
                   >
-                    {thinkingText || "Waiting for model reasoning logs to stream..."}
+                    {renderFormattedThinking(thinkingText)}
                   </div>
                 </div>
 
