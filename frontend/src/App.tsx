@@ -88,14 +88,14 @@ const mockReport: ComparisonReport = {
       type: "deleted",
       description: "Pet policy lease rider removed.",
       originalText: "Tenant is permitted to keep one domestic cat under 15 lbs on the premises.",
-      revisedText: "Clause deleted in revised agreement.",
+      revisedText: "",
       severity: "medium"
     },
     {
       page: "6",
       type: "added",
       description: "Indemnification clause added for parking space damages.",
-      originalText: "[No clause existed]",
+      originalText: "",
       revisedText: "Tenant agrees to indemnify landlord for any claims arising from parking space usage.",
       severity: "low"
     }
@@ -139,7 +139,6 @@ export default function App() {
   const [report, setReport] = useState<ComparisonReport | null>(null);
   
   const [isLoading, setIsLoading] = useState(false);
-  const [progressMsg, setProgressMsg] = useState('');
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [isDemoMode, setIsDemoMode] = useState(false);
@@ -156,6 +155,19 @@ export default function App() {
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
+
+  const [loadingStep, setLoadingStep] = useState(0);
+
+  useEffect(() => {
+    let interval: any;
+    if (isLoading) {
+      setLoadingStep(0);
+      interval = setInterval(() => {
+        setLoadingStep((prev) => Math.min(prev + 1, 4));
+      }, 2500);
+    }
+    return () => clearInterval(interval);
+  }, [isLoading]);
 
   // Fetch document lists
   const fetchFiles = async () => {
@@ -235,7 +247,6 @@ export default function App() {
     if (!isConfigured) {
       setIsLoading(true);
       setIsDemoMode(true);
-      setProgressMsg("Simulating local comparison (Demo Mode)...");
       
       const steps = [
         "Uploading Original File to virtual repository...",
@@ -247,7 +258,6 @@ export default function App() {
       ];
 
       for (let i = 0; i < steps.length; i++) {
-        setProgressMsg(steps[i]);
         await new Promise((resolve) => setTimeout(resolve, 1500));
       }
 
@@ -256,20 +266,17 @@ export default function App() {
         { role: 'agent', content: "Hello! I am your Comparison Agent. I have successfully analyzed the differences between your two documents. Ask me anything about the changes!" }
       ]);
       setIsLoading(false);
-      setProgressMsg('');
       setActiveTab('summary');
       return;
     }
 
     setIsLoading(true);
     setIsDemoMode(false);
-    setProgressMsg("Contacting Gemini Comparison Agent...");
 
     try {
       // Simulate frontend status steps as request is processed (or poll)
       // Since it's a single HTTP response, we trigger step indicators based on approximate timing,
       // or we can print them when the API returns. We will just keep a friendly loading text:
-      setProgressMsg("Uploading files and comparing visual layouts page-by-page...");
       
       const res = await fetch(`${API_BASE}/compare`, {
         method: 'POST',
@@ -291,7 +298,6 @@ export default function App() {
       alert("Error reaching backend. Check if the server is running on port 5001.");
     } finally {
       setIsLoading(false);
-      setProgressMsg('');
     }
   };
 
@@ -453,78 +459,89 @@ export default function App() {
                 No files uploaded yet.
               </div>
             ) : (
-              files.map(file => (
-                <div 
-                  key={file.filename} 
-                  className="glass-card" 
-                  style={{ 
-                    padding: '12px', 
-                    borderRadius: '10px', 
-                    border: '1px solid hsla(224, 71%, 20%, 0.25)', 
-                    display: 'flex', 
-                    flexDirection: 'column', 
-                    gap: '8px',
-                    background: fileA === file.filename ? 'hsla(263, 90%, 50%, 0.08)' : fileB === file.filename ? 'hsla(190, 90%, 50%, 0.08)' : 'hsla(224, 71%, 8%, 0.35)',
-                    borderColor: fileA === file.filename ? 'hsla(263, 90%, 50%, 0.5)' : fileB === file.filename ? 'hsla(190, 90%, 50%, 0.5)' : 'hsla(224, 71%, 20%, 0.25)'
-                  }}
-                >
-                  <div style={{ display: 'flex', alignItems: 'flex-start', justifyItems: 'space-between', gap: '8px' }}>
-                    <FileText size={18} style={{ color: 'hsl(var(--text-muted))', marginTop: '2px', flexShrink: 0 }} />
-                    <span style={{ fontSize: '13px', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', width: '100%' }} title={file.displayName}>
-                      {file.displayName}
-                    </span>
-                  </div>
+              files.map(file => {
+                const isSelectedA = fileA === file.filename;
+                const isSelectedB = fileB === file.filename;
+                
+                return (
+                  <div 
+                    key={file.filename} 
+                    className="glass-card" 
+                    style={{ 
+                      padding: '12px', 
+                      borderRadius: '10px', 
+                      display: 'flex', 
+                      flexDirection: 'column', 
+                      gap: '8px',
+                      background: isSelectedA ? 'hsla(263, 90%, 50%, 0.08)' : isSelectedB ? 'hsla(190, 90%, 50%, 0.08)' : 'hsla(224, 71%, 8%, 0.35)',
+                      borderColor: isSelectedA ? 'hsl(263 90% 50%)' : isSelectedB ? 'hsl(190 90% 50%)' : 'hsla(224, 71%, 20%, 0.25)',
+                      boxShadow: isSelectedA ? '0 0 10px hsla(263, 90%, 50%, 0.2)' : isSelectedB ? '0 0 10px hsla(190, 90%, 50%, 0.2)' : 'none'
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'flex-start', justifyItems: 'space-between', gap: '8px' }}>
+                      <FileText size={18} style={{ color: 'hsl(var(--text-muted))', marginTop: '2px', flexShrink: 0 }} />
+                      <span style={{ fontSize: '13px', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', width: '100%' }} title={file.displayName}>
+                        {file.displayName}
+                      </span>
+                    </div>
 
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '11px', color: 'hsl(var(--text-muted))' }}>
-                    <span>{formatBytes(file.size)}</span>
-                    <a 
-                      href={`${API_BASE}/download/${file.filename}`}
-                      style={{ color: 'hsl(var(--text-muted))', display: 'flex', alignItems: 'center', gap: '4px', textDecoration: 'none' }}
-                      title="Download original file"
-                    >
-                      <Download size={12} /> Download
-                    </a>
-                  </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '11px', color: 'hsl(var(--text-muted))' }}>
+                      <span>{formatBytes(file.size)}</span>
+                      <a 
+                        href={`${API_BASE}/download/${file.filename}`}
+                        style={{ color: 'hsl(var(--text-muted))', display: 'flex', alignItems: 'center', gap: '4px', textDecoration: 'none' }}
+                        title="Download original file"
+                      >
+                        <Download size={12} /> Download
+                      </a>
+                    </div>
 
-                  {/* Document Selection Hooks */}
-                  <div style={{ display: 'flex', gap: '6px', marginTop: '4px' }}>
-                    <button 
-                      onClick={() => setFileA(fileA === file.filename ? null : file.filename)}
-                      style={{ 
-                        flex: 1, 
-                        padding: '4px 0', 
-                        fontSize: '11px', 
-                        borderRadius: '6px', 
-                        cursor: 'pointer',
-                        background: fileA === file.filename ? 'hsl(263, 90%, 50%)' : 'hsla(224, 71%, 20%, 0.4)',
-                        border: 'none',
-                        color: '#fff',
-                        fontWeight: 600,
-                        transition: 'all 0.2s'
-                      }}
-                    >
-                      Original (A)
-                    </button>
-                    <button 
-                      onClick={() => setFileB(fileB === file.filename ? null : file.filename)}
-                      style={{ 
-                        flex: 1, 
-                        padding: '4px 0', 
-                        fontSize: '11px', 
-                        borderRadius: '6px', 
-                        cursor: 'pointer',
-                        background: fileB === file.filename ? 'hsl(190, 90%, 50%)' : 'hsla(224, 71%, 20%, 0.4)',
-                        border: 'none',
-                        color: '#fff',
-                        fontWeight: 600,
-                        transition: 'all 0.2s'
-                      }}
-                    >
-                      Revised (B)
-                    </button>
+                    {/* Selection Controls */}
+                    <div style={{ display: 'flex', gap: '6px', marginTop: '4px' }}>
+                      <button 
+                        onClick={() => {
+                          setFileA(isSelectedA ? null : file.filename);
+                          if (isSelectedB) setFileB(null); // prevent selecting same file for both
+                        }}
+                        style={{ 
+                          flex: 1, 
+                          padding: '6px 0', 
+                          fontSize: '11px', 
+                          borderRadius: '6px', 
+                          cursor: 'pointer',
+                          background: isSelectedA ? 'hsl(263, 90%, 50%)' : 'hsla(224, 71%, 20%, 0.2)',
+                          border: isSelectedA ? 'none' : '1px solid hsla(224, 71%, 30%, 0.3)',
+                          color: '#fff',
+                          fontWeight: 600,
+                          transition: 'all 0.2s'
+                        }}
+                      >
+                        {isSelectedA ? 'Selected A' : 'Set Original (A)'}
+                      </button>
+                      <button 
+                        onClick={() => {
+                          setFileB(isSelectedB ? null : file.filename);
+                          if (isSelectedA) setFileA(null);
+                        }}
+                        style={{ 
+                          flex: 1, 
+                          padding: '6px 0', 
+                          fontSize: '11px', 
+                          borderRadius: '6px', 
+                          cursor: 'pointer',
+                          background: isSelectedB ? 'hsl(190, 90%, 50%)' : 'hsla(224, 71%, 20%, 0.2)',
+                          border: isSelectedB ? 'none' : '1px solid hsla(190, 90%, 50%, 0.3)',
+                          color: '#fff',
+                          fontWeight: 600,
+                          transition: 'all 0.2s'
+                        }}
+                      >
+                        {isSelectedB ? 'Selected B' : 'Set Revised (B)'}
+                      </button>
+                    </div>
                   </div>
-                </div>
-              ))
+                );
+              })
             )}
           </div>
 
@@ -554,22 +571,124 @@ export default function App() {
           
           {/* 1. Loading Screen */}
           {isLoading && (
-            <div style={{ position: 'absolute', inset: 0, background: 'hsla(224, 71%, 4%, 0.85)', backdropFilter: 'blur(8px)', zIndex: 10, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '20px', padding: '40px', borderRadius: 'var(--border-radius)' }}>
-              <div style={{ display: 'flex', gap: '8px' }}>
-                <span style={{ width: '12px', height: '12px', background: 'hsl(var(--primary))', borderRadius: '50%', animation: 'bounce 0.6s infinite alternate' }}></span>
-                <span style={{ width: '12px', height: '12px', background: 'hsl(var(--secondary))', borderRadius: '50%', animation: 'bounce 0.6s infinite alternate 0.2s' }}></span>
-                <span style={{ width: '12px', height: '12px', background: '#fff', borderRadius: '50%', animation: 'bounce 0.6s infinite alternate 0.4s' }}></span>
+            <div style={{ position: 'absolute', inset: 0, background: 'hsla(224, 71%, 4%, 0.9)', backdropFilter: 'blur(12px)', zIndex: 100, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '30px', padding: '40px', borderRadius: 'var(--border-radius)' }}>
+              
+              {/* Spinner ring */}
+              <div style={{ position: 'relative', width: '80px', height: '80px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <div style={{ position: 'absolute', inset: 0, border: '4px solid hsla(263, 90%, 50%, 0.1)', borderRadius: '50%' }}></div>
+                <div style={{ position: 'absolute', inset: 0, border: '4px solid transparent', borderTopColor: 'hsl(var(--primary-glow))', borderRightColor: 'hsl(var(--secondary))', borderRadius: '50%', animation: 'spin 1.2s cubic-bezier(0.5, 0, 0.5, 1) infinite' }}></div>
+                <Sparkles size={24} style={{ color: 'hsl(var(--primary-glow))', animation: 'pulse 1.5s infinite ease-in-out' }} />
               </div>
-              <div style={{ textAlign: 'center', maxWidth: '400px' }}>
-                <h3 style={{ fontSize: '18px', marginBottom: '8px' }} className="glow-text-primary">Gemini Compare Agent Active</h3>
-                <p style={{ fontSize: '13px', color: 'hsl(var(--text-muted))', minHeight: '40px', lineBreak: 'anywhere' }}>
-                  {progressMsg}
-                </p>
+
+              <div style={{ textAlign: 'center', maxWidth: '450px', width: '100%' }}>
+                <h3 style={{ fontSize: '20px', fontWeight: 600, marginBottom: '24px', color: '#fff' }} className="glow-text-primary">
+                  Auditing Document Comparison
+                </h3>
+                
+                {/* Stepper progress list */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', textAlign: 'left', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', padding: '20px', borderRadius: '12px' }}>
+                  {[
+                    "Staging documents in workspace storage...",
+                    "Uploading files to Gemini Secure Gateway...",
+                    "Performing multimodal structural layout audit...",
+                    "Scanning clause differences & textual modifications...",
+                    "Synthesizing results and formulating JSON audit..."
+                  ].map((step, idx) => {
+                    const isDone = loadingStep > idx;
+                    const isActive = loadingStep === idx;
+                    
+                    return (
+                      <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '12px', opacity: isDone ? 1 : isActive ? 1 : 0.4, transition: 'opacity 0.3s' }}>
+                        {isDone ? (
+                          <div style={{ width: '18px', height: '18px', borderRadius: '50%', background: 'hsl(var(--success))', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: '10px', fontWeight: 'bold' }}>✓</div>
+                        ) : isActive ? (
+                          <RefreshCw size={14} className="spin" style={{ animation: 'spin 2s linear infinite', color: 'hsl(var(--primary-glow))' }} />
+                        ) : (
+                          <div style={{ width: '18px', height: '18px', borderRadius: '50%', border: '2px solid hsla(224, 71%, 20%, 0.6)', background: 'transparent' }}></div>
+                        )}
+                        <span style={{ fontSize: '13px', color: isActive ? '#fff' : 'hsl(var(--text-muted))', fontWeight: isActive ? 600 : 400 }}>{step}</span>
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
             </div>
           )}
 
-          {/* 2. Default Welcome State */}
+          {/* 2. Top-level Document Slot Selection (Active Configuration) */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 12px 1fr', gap: '12px', marginBottom: '20px', paddingBottom: '20px', borderBottom: '1px solid hsla(224, 71%, 20%, 0.3)', alignItems: 'center' }}>
+            {/* Slot A: Original */}
+            <div 
+              className="glass-card" 
+              style={{ 
+                padding: '16px', 
+                borderStyle: fileA ? 'solid' : 'dashed', 
+                borderWidth: '1.5px',
+                borderColor: fileA ? 'hsl(263 90% 50% / 0.4)' : 'hsla(224, 71%, 20%, 0.6)',
+                background: fileA ? 'hsla(263, 90%, 50%, 0.04)' : 'hsla(224, 71%, 4%, 0.2)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                borderRadius: '12px',
+                gap: '12px'
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', overflow: 'hidden' }}>
+                <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: fileA ? 'hsl(263 90% 50%)' : 'hsla(224, 71%, 20%, 0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <FileText size={16} color="#fff" />
+                </div>
+                <div style={{ overflow: 'hidden' }}>
+                  <div style={{ fontSize: '11px', textTransform: 'uppercase', color: 'hsl(var(--text-muted))', fontWeight: 600 }}>Original Document (A)</div>
+                  <div style={{ fontSize: '13px', fontWeight: 500, color: fileA ? '#fff' : 'hsl(var(--text-muted))', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
+                    {fileA ? files.find(f => f.filename === fileA)?.displayName : "No file selected"}
+                  </div>
+                </div>
+              </div>
+              {fileA && (
+                <button onClick={() => setFileA(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'hsl(var(--text-muted))', display: 'flex', padding: '4px' }} title="Clear Selection">
+                  <X size={16} />
+                </button>
+              )}
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'center', color: 'hsla(224, 71%, 20%, 0.6)', fontWeight: 600, fontSize: '14px' }}>VS</div>
+
+            {/* Slot B: Revised */}
+            <div 
+              className="glass-card" 
+              style={{ 
+                padding: '16px', 
+                borderStyle: fileB ? 'solid' : 'dashed', 
+                borderWidth: '1.5px',
+                borderColor: fileB ? 'hsl(190 90% 50% / 0.4)' : 'hsla(224, 71%, 20%, 0.6)',
+                background: fileB ? 'hsla(190, 90%, 50%, 0.04)' : 'hsla(224, 71%, 4%, 0.2)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                borderRadius: '12px',
+                gap: '12px'
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', overflow: 'hidden' }}>
+                <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: fileB ? 'hsl(190 90% 50%)' : 'hsla(224, 71%, 20%, 0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <FileText size={16} color="#fff" />
+                </div>
+                <div style={{ overflow: 'hidden' }}>
+                  <div style={{ fontSize: '11px', textTransform: 'uppercase', color: 'hsl(var(--text-muted))', fontWeight: 600 }}>Revised Document (B)</div>
+                  <div style={{ fontSize: '13px', fontWeight: 500, color: fileB ? '#fff' : 'hsl(var(--text-muted))', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
+                    {fileB ? files.find(f => f.filename === fileB)?.displayName : "No file selected"}
+                  </div>
+                </div>
+              </div>
+              {fileB && (
+                <button onClick={() => setFileB(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'hsl(var(--text-muted))', display: 'flex', padding: '4px' }} title="Clear Selection">
+                  <X size={16} />
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* 3. Default Welcome State */}
           {!report && !isLoading && (
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', flex: 1, gap: '20px', textAlign: 'center', padding: '40px' }}>
               <div style={{ width: '80px', height: '80px', borderRadius: '24px', background: 'hsla(263, 90%, 50%, 0.15)', border: '1px solid hsla(263, 90%, 50%, 0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '10px' }} className="pulsing-glow">
@@ -578,7 +697,7 @@ export default function App() {
               <div style={{ maxWidth: '500px' }}>
                 <h2 style={{ fontSize: '24px', marginBottom: '10px' }}>Welcome to AlloCapUpdates</h2>
                 <p style={{ fontSize: '14px', color: 'hsl(var(--text-muted))', lineHeight: 1.6 }}>
-                  Select an **Original Document** (from the left menu) and a **Revised Document**, and run the agent audit. Gemini 3.5 Flash will compare text, table cells, and visual changes.
+                  Choose your documents in the left **Document Storage** sidebar to set the **Original (A)** and **Revised (B)** targets, then hit **Compare Documents** to launch the analysis.
                 </p>
               </div>
               
@@ -603,7 +722,7 @@ export default function App() {
             </div>
           )}
 
-          {/* 3. Comparison Report State */}
+          {/* 4. Comparison Report State */}
           {report && !isLoading && (
             <div style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
               
@@ -719,14 +838,24 @@ export default function App() {
                           
                           <p style={{ fontSize: '13px', fontWeight: 600, marginBottom: '12px' }}>{change.description}</p>
                           
-                          {change.originalText && (
+                          {change.type === 'added' ? (
+                            <div style={{ padding: '12px', background: 'rgba(34, 197, 94, 0.06)', border: '1px solid rgba(34, 197, 94, 0.2)', borderRadius: '8px', fontSize: '12px', fontFamily: 'monospace', whiteSpace: 'pre-wrap' }}>
+                              <div style={{ fontSize: '10px', textTransform: 'uppercase', color: 'rgb(34, 197, 94)', fontWeight: 600, marginBottom: '6px' }}>+ Added Verbatim Content</div>
+                              {change.revisedText}
+                            </div>
+                          ) : change.type === 'deleted' ? (
+                            <div style={{ padding: '12px', background: 'rgba(239, 68, 68, 0.06)', border: '1px solid rgba(239, 68, 68, 0.2)', borderRadius: '8px', fontSize: '12px', fontFamily: 'monospace', whiteSpace: 'pre-wrap' }}>
+                              <div style={{ fontSize: '10px', textTransform: 'uppercase', color: 'rgb(239, 68, 68)', fontWeight: 600, marginBottom: '6px' }}>- Deleted Verbatim Content</div>
+                              {change.originalText}
+                            </div>
+                          ) : (
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', fontSize: '12px' }}>
                               <div style={{ padding: '10px', background: 'rgba(239, 68, 68, 0.08)', border: '1px solid rgba(239, 68, 68, 0.2)', borderRadius: '6px' }}>
-                                <div style={{ fontSize: '10px', textTransform: 'uppercase', color: 'rgb(239, 68, 68)', fontWeight: 600, marginBottom: '4px' }}>Original Document</div>
+                                <div style={{ fontSize: '10px', textTransform: 'uppercase', color: 'rgb(239, 68, 68)', fontWeight: 600, marginBottom: '4px' }}>Original Segment</div>
                                 <div style={{ fontFamily: 'monospace', whiteSpace: 'pre-wrap' }}>{change.originalText}</div>
                               </div>
                               <div style={{ padding: '10px', background: 'rgba(34, 197, 94, 0.08)', border: '1px solid rgba(34, 197, 94, 0.2)', borderRadius: '6px' }}>
-                                <div style={{ fontSize: '10px', textTransform: 'uppercase', color: 'rgb(34, 197, 94)', fontWeight: 600, marginBottom: '4px' }}>Revised Document</div>
+                                <div style={{ fontSize: '10px', textTransform: 'uppercase', color: 'rgb(34, 197, 94)', fontWeight: 600, marginBottom: '4px' }}>Revised Segment</div>
                                 <div style={{ fontFamily: 'monospace', whiteSpace: 'pre-wrap' }}>{change.revisedText}</div>
                               </div>
                             </div>

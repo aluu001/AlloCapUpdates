@@ -141,7 +141,11 @@ export async function compareDocuments(
               
               Perform a highly detailed comparison and identify every difference:
               1. **Text Content**: Identify modifications, deletions, and additions in the text. Look for changes in names, definitions, percentages, dates, and clauses.
-              2. **Tables**: Identify any changes in tables (structure, new rows, new columns, value updates).
+                 - For 'added' items: Set 'originalText' to null or an empty string, and populate 'revisedText' with the exact verbatim text that was added.
+                 - For 'deleted' items: Populate 'originalText' with the exact verbatim text that was deleted, and set 'revisedText' to null or an empty string.
+                 - For 'modified' items: Verbatim before (originalText) and after (revisedText) segments must be provided.
+                 - Never paraphrase or summarize inside the originalText or revisedText fields; extract the exact segments verbatim.
+              2. **Tables**: Identify any changes in tables (structure, new rows, new columns, value updates). Be highly specific about the columns, row headers, or cells modified.
               3. **Visuals & Layout**: Identify any changes in images, charts, flowchart diagrams, headers/footers, or layout styles.
               
               Generate a structured JSON output according to the requested schema.`
