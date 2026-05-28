@@ -13,7 +13,8 @@ import {
   LayoutGrid,
   Table,
   Layers,
-  Sparkles
+  Sparkles,
+  Trash2
 } from 'lucide-react';
 
 const API_BASE = 'http://localhost:5001/api';
@@ -461,6 +462,26 @@ export default function App() {
     }
   };
 
+  // Delete file handler
+  const handleDeleteFile = async (filename: string) => {
+    try {
+      const res = await fetch(`${API_BASE}/files/${filename}`, {
+        method: 'DELETE',
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        // Clear active selection if the deleted file was selected
+        if (fileA === filename) setFileA(null);
+        if (fileB === filename) setFileB(null);
+        await fetchFiles();
+      } else {
+        alert(data.error || "Failed to delete file.");
+      }
+    } catch (err) {
+      alert("Error contacting server to delete file.");
+    }
+  };
+
   // Compare documents handler (supporting streaming thoughts)
   const handleCompare = async () => {
     if (!fileA || !fileB) return;
@@ -655,7 +676,7 @@ export default function App() {
       {/* Header Bar */}
       <header className="glass-container" style={{ margin: '16px 24px 0', padding: '16px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <div style={{ background: 'linear-gradient(135deg, hsl(263, 90%, 50%) 0%, hsl(190, 90%, 50%) 100%)', width: '40px', height: '40px', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 0 15px hsla(263, 90%, 50%, 0.4)' }}>
+          <div style={{ background: 'linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--secondary)) 100%)', width: '40px', height: '40px', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 0 15px hsla(var(--primary) / 0.4)' }}>
             <Sparkles size={22} color="#fff" />
           </div>
           <div>
@@ -673,7 +694,7 @@ export default function App() {
               <span>Demo Mode active (No API Key)</span>
             </div>
           )}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'hsla(263, 90%, 50%, 0.15)', border: '1px solid hsl(263 90% 50% / 0.3)', padding: '6px 12px', borderRadius: '20px', fontSize: '12px', color: 'hsl(263 90% 60%)', fontWeight: 600 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'hsla(var(--primary) / 0.15)', border: '1px solid hsla(var(--primary) / 0.3)', padding: '6px 12px', borderRadius: '20px', fontSize: '12px', color: 'hsl(var(--primary-glow))', fontWeight: 600 }}>
             <span>Gemini 3.5 Flash</span>
           </div>
         </div>
@@ -746,76 +767,132 @@ export default function App() {
                     key={file.filename} 
                     className="glass-card" 
                     style={{ 
-                      padding: '12px', 
-                      borderRadius: '10px', 
+                      padding: '8px 12px', 
+                      borderRadius: '8px', 
                       display: 'flex', 
-                      flexDirection: 'column', 
-                      gap: '8px',
-                      background: isSelectedA ? 'hsla(263, 90%, 50%, 0.08)' : isSelectedB ? 'hsla(190, 90%, 50%, 0.08)' : 'hsla(224, 71%, 8%, 0.35)',
-                      borderColor: isSelectedA ? 'hsl(263 90% 50%)' : isSelectedB ? 'hsl(190 90% 50%)' : 'hsla(224, 71%, 20%, 0.25)',
-                      boxShadow: isSelectedA ? '0 0 10px hsla(263, 90%, 50%, 0.2)' : isSelectedB ? '0 0 10px hsla(190, 90%, 50%, 0.2)' : 'none'
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      gap: '10px',
+                      background: isSelectedA ? 'hsla(250, 95%, 62%, 0.08)' : isSelectedB ? 'hsla(185, 95%, 48%, 0.08)' : 'hsla(224, 47%, 10%, 0.45)',
+                      borderColor: isSelectedA ? 'hsl(250 95% 62% / 0.45)' : isSelectedB ? 'hsl(185 95% 48% / 0.45)' : 'hsla(224, 47%, 25%, 0.2)',
+                      boxShadow: isSelectedA ? '0 0 10px hsla(250, 95%, 62%, 0.15)' : isSelectedB ? '0 0 10px hsla(185, 95%, 48%, 0.15)' : 'none',
+                      transition: 'all 0.2s ease'
                     }}
                   >
-                    <div style={{ display: 'flex', alignItems: 'flex-start', justifyItems: 'space-between', gap: '8px' }}>
-                      <FileText size={18} style={{ color: 'hsl(var(--text-muted))', marginTop: '2px', flexShrink: 0 }} />
-                      <span style={{ fontSize: '13px', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', width: '100%' }} title={file.displayName}>
-                        {file.displayName}
-                      </span>
+                    {/* Left: Icon and Name/Size */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', overflow: 'hidden', flex: 1 }}>
+                      <FileText size={15} style={{ color: isSelectedA ? 'hsl(250, 95%, 62%)' : isSelectedB ? 'hsl(185, 95%, 48%)' : 'hsl(var(--text-muted))', flexShrink: 0 }} />
+                      <div style={{ overflow: 'hidden', display: 'flex', flexDirection: 'column', textAlign: 'left' }}>
+                        <span style={{ fontSize: '12.5px', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: isSelectedA || isSelectedB ? '#fff' : 'hsl(var(--text-primary))' }} title={file.displayName}>
+                          {file.displayName}
+                        </span>
+                        <span style={{ fontSize: '10px', color: 'hsl(var(--text-muted))' }}>{formatBytes(file.size)}</span>
+                      </div>
                     </div>
 
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '11px', color: 'hsl(var(--text-muted))' }}>
-                      <span>{formatBytes(file.size)}</span>
-                      <a 
-                        href={`${API_BASE}/download/${file.filename}`}
-                        style={{ color: 'hsl(var(--text-muted))', display: 'flex', alignItems: 'center', gap: '4px', textDecoration: 'none' }}
-                        title="Download original file"
-                      >
-                        <Download size={12} /> Download
-                      </a>
-                    </div>
-
-                    {/* Selection Controls */}
-                    <div style={{ display: 'flex', gap: '6px', marginTop: '4px' }}>
-                      <button 
+                    {/* Right: Select A, Select B, Download, Delete actions */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
+                      
+                      {/* Select A Button */}
+                      <button
                         onClick={() => {
                           setFileA(isSelectedA ? null : file.filename);
                           if (isSelectedB) setFileB(null); // prevent selecting same file for both
                         }}
-                        style={{ 
-                          flex: 1, 
-                          padding: '6px 0', 
-                          fontSize: '11px', 
-                          borderRadius: '6px', 
+                        style={{
+                          width: '22px',
+                          height: '22px',
+                          borderRadius: '50%',
+                          fontSize: '10px',
+                          fontWeight: 700,
                           cursor: 'pointer',
-                          background: isSelectedA ? 'hsl(263, 90%, 50%)' : 'hsla(224, 71%, 20%, 0.2)',
-                          border: isSelectedA ? 'none' : '1px solid hsla(224, 71%, 30%, 0.3)',
-                          color: '#fff',
-                          fontWeight: 600,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          border: isSelectedA ? 'none' : '1px solid hsla(250, 95%, 62%, 0.4)',
+                          background: isSelectedA ? 'hsl(250, 95%, 62%)' : 'transparent',
+                          color: isSelectedA ? '#fff' : 'hsl(250, 95%, 72%)',
                           transition: 'all 0.2s'
                         }}
+                        title={isSelectedA ? "Unselect Original" : "Set as Original (A)"}
                       >
-                        {isSelectedA ? 'Selected A' : 'Set Original (A)'}
+                        A
                       </button>
-                      <button 
+
+                      {/* Select B Button */}
+                      <button
                         onClick={() => {
                           setFileB(isSelectedB ? null : file.filename);
-                          if (isSelectedA) setFileA(null);
+                          if (isSelectedA) setFileA(null); // prevent selecting same file for both
                         }}
-                        style={{ 
-                          flex: 1, 
-                          padding: '6px 0', 
-                          fontSize: '11px', 
-                          borderRadius: '6px', 
+                        style={{
+                          width: '22px',
+                          height: '22px',
+                          borderRadius: '50%',
+                          fontSize: '10px',
+                          fontWeight: 700,
                           cursor: 'pointer',
-                          background: isSelectedB ? 'hsl(190, 90%, 50%)' : 'hsla(224, 71%, 20%, 0.2)',
-                          border: isSelectedB ? 'none' : '1px solid hsla(190, 90%, 50%, 0.3)',
-                          color: '#fff',
-                          fontWeight: 600,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          border: isSelectedB ? 'none' : '1px solid hsla(185, 95%, 48%, 0.4)',
+                          background: isSelectedB ? 'hsl(185, 95%, 48%)' : 'transparent',
+                          color: isSelectedB ? '#000' : 'hsl(185, 95%, 48%)',
                           transition: 'all 0.2s'
                         }}
+                        title={isSelectedB ? "Unselect Revised" : "Set as Revised (B)"}
                       >
-                        {isSelectedB ? 'Selected B' : 'Set Revised (B)'}
+                        B
                       </button>
+
+                      {/* Download */}
+                      <a 
+                        href={`${API_BASE}/download/${file.filename}`}
+                        style={{ 
+                          width: '22px',
+                          height: '22px',
+                          borderRadius: '50%',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          background: 'rgba(255,255,255,0.03)',
+                          border: '1px solid rgba(255,255,255,0.08)',
+                          color: 'hsl(var(--text-muted))',
+                          transition: 'all 0.2s',
+                          cursor: 'pointer'
+                        }}
+                        title="Download original document"
+                      >
+                        <Download size={11} />
+                      </a>
+
+                      {/* Delete */}
+                      <button
+                        onClick={async (e) => {
+                          e.stopPropagation();
+                          if (confirm(`Are you sure you want to delete ${file.displayName}?`)) {
+                            await handleDeleteFile(file.filename);
+                          }
+                        }}
+                        style={{
+                          width: '22px',
+                          height: '22px',
+                          borderRadius: '50%',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          background: 'rgba(239, 68, 68, 0.05)',
+                          border: '1px solid rgba(239, 68, 68, 0.15)',
+                          color: 'rgba(239, 68, 68, 0.7)',
+                          cursor: 'pointer',
+                          transition: 'all 0.2s'
+                        }}
+                        className="delete-btn-hover"
+                        title="Delete document"
+                      >
+                        <Trash2 size={11} />
+                      </button>
+
                     </div>
                   </div>
                 );
@@ -858,7 +935,7 @@ export default function App() {
                   <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
                     {/* Spinner ring */}
                     <div style={{ position: 'relative', width: '50px', height: '50px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                      <div style={{ position: 'absolute', inset: 0, border: '3px solid hsla(263, 90%, 50%, 0.15)', borderRadius: '50%' }}></div>
+                      <div style={{ position: 'absolute', inset: 0, border: '3px solid hsla(var(--primary) / 0.15)', borderRadius: '50%' }}></div>
                       <div style={{ position: 'absolute', inset: 0, border: '3px solid transparent', borderTopColor: 'hsl(var(--primary-glow))', borderRightColor: 'hsl(var(--secondary))', borderRadius: '50%', animation: 'spin 1.2s cubic-bezier(0.5, 0, 0.5, 1) infinite' }}></div>
                       <Sparkles size={16} style={{ color: 'hsl(var(--primary-glow))' }} />
                     </div>
@@ -906,9 +983,8 @@ export default function App() {
                   <div 
                     ref={thinkingConsoleRef}
                     style={{ 
-                      fontSize: '13px', 
-                      background: 'radial-gradient(circle at 100% 0%, hsla(263, 90%, 50%, 0.06) 0%, hsla(190, 90%, 50%, 0.03) 50%, hsla(224, 71%, 4%, 0.65) 100%)', 
-                      border: '1px solid hsla(263, 90%, 50%, 0.25)', 
+                      background: 'radial-gradient(circle at 100% 0%, hsla(var(--primary) / 0.06) 0%, hsla(var(--secondary) / 0.03) 50%, hsla(var(--bg-main) / 0.65) 100%)', 
+                      border: '1px solid hsla(var(--primary) / 0.25)', 
                       padding: '20px', 
                       borderRadius: '16px', 
                       height: '350px', 
@@ -928,7 +1004,7 @@ export default function App() {
           )}
 
           {/* 2. Top-level Document Slot Selection (Active Configuration) */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 12px 1fr', gap: '12px', marginBottom: '20px', paddingBottom: '20px', borderBottom: '1px solid hsla(224, 71%, 20%, 0.3)', alignItems: 'center' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 12px 1fr', gap: '12px', marginBottom: '20px', paddingBottom: '20px', borderBottom: '1px solid hsla(224, 47%, 25%, 0.25)', alignItems: 'center' }}>
             {/* Slot A: Original */}
             <div 
               className="glass-card" 
@@ -936,8 +1012,8 @@ export default function App() {
                 padding: '16px', 
                 borderStyle: fileA ? 'solid' : 'dashed', 
                 borderWidth: '1.5px',
-                borderColor: fileA ? 'hsl(263 90% 50% / 0.4)' : 'hsla(224, 71%, 20%, 0.6)',
-                background: fileA ? 'hsla(263, 90%, 50%, 0.04)' : 'hsla(224, 71%, 4%, 0.2)',
+                borderColor: fileA ? 'hsl(var(--primary))' : 'hsla(224, 47%, 25%, 0.35)',
+                background: fileA ? 'hsla(var(--primary) / 0.05)' : 'hsla(224, 47%, 10%, 0.2)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'space-between',
@@ -946,7 +1022,7 @@ export default function App() {
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px', overflow: 'hidden' }}>
-                <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: fileA ? 'hsl(263 90% 50%)' : 'hsla(224, 71%, 20%, 0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: fileA ? 'hsl(var(--primary))' : 'hsla(224, 47%, 25%, 0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                   <FileText size={16} color="#fff" />
                 </div>
                 <div style={{ overflow: 'hidden' }}>
@@ -963,7 +1039,7 @@ export default function App() {
               )}
             </div>
 
-            <div style={{ display: 'flex', justifyContent: 'center', color: 'hsla(224, 71%, 20%, 0.6)', fontWeight: 600, fontSize: '14px' }}>VS</div>
+            <div style={{ display: 'flex', justifyContent: 'center', color: 'hsla(224, 47%, 25%, 0.5)', fontWeight: 600, fontSize: '14px' }}>VS</div>
 
             {/* Slot B: Revised */}
             <div 
@@ -972,8 +1048,8 @@ export default function App() {
                 padding: '16px', 
                 borderStyle: fileB ? 'solid' : 'dashed', 
                 borderWidth: '1.5px',
-                borderColor: fileB ? 'hsl(190 90% 50% / 0.4)' : 'hsla(224, 71%, 20%, 0.6)',
-                background: fileB ? 'hsla(190, 90%, 50%, 0.04)' : 'hsla(224, 71%, 4%, 0.2)',
+                borderColor: fileB ? 'hsl(var(--secondary))' : 'hsla(224, 47%, 25%, 0.35)',
+                background: fileB ? 'hsla(var(--secondary) / 0.05)' : 'hsla(224, 47%, 10%, 0.2)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'space-between',
@@ -982,7 +1058,7 @@ export default function App() {
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px', overflow: 'hidden' }}>
-                <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: fileB ? 'hsl(190 90% 50%)' : 'hsla(224, 71%, 20%, 0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: fileB ? 'hsl(var(--secondary))' : 'hsla(224, 47%, 25%, 0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                   <FileText size={16} color="#fff" />
                 </div>
                 <div style={{ overflow: 'hidden' }}>
@@ -1003,7 +1079,7 @@ export default function App() {
           {/* 3. Default Welcome State */}
           {!report && !isLoading && (
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', flex: 1, gap: '20px', textAlign: 'center', padding: '40px' }}>
-              <div style={{ width: '80px', height: '80px', borderRadius: '24px', background: 'hsla(263, 90%, 50%, 0.15)', border: '1px solid hsla(263, 90%, 50%, 0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '10px' }} className="pulsing-glow">
+              <div style={{ width: '80px', height: '80px', borderRadius: '24px', background: 'hsla(var(--primary) / 0.15)', border: '1px solid hsla(var(--primary) / 0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '10px' }} className="pulsing-glow">
                 <FileCheck size={40} style={{ color: 'hsl(var(--primary-glow))' }} />
               </div>
               <div style={{ maxWidth: '500px' }}>

@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=Raleway:wght@300;400;500;600;700;800&display=swap');
 
 :root {
   font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
@@ -6,30 +6,32 @@
   font-weight: 400;
 
   color-scheme: dark;
-  color: #f8fafc;
-  background-color: #030712;
+  color: #f1f5f9;
+  background-color: #04060e;
 
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 
-  /* Color Palette - HSL values */
-  --bg-main: 224 71% 4%;
-  --bg-card: 224 71% 8%;
-  --border-glow: 263 90% 60%;
-  --primary: 263 90% 50%;
-  --primary-glow: 263 90% 60%;
-  --secondary: 190 90% 50%;
-  --success: 142 76% 45%;
-  --warning: 38 92% 50%;
-  --danger: 0 84% 60%;
-  --text-muted: 215 20% 65%;
+  /* Color Palette - Inspired by AlloCap Corporate Brand Colors (Cobalt Navy, Teal, & Emerald Green) */
+  --bg-main: 220 40% 6%;          /* Deep Dark Navy Slate */
+  --bg-card: 220 40% 10%;         /* Dark Card Backing */
+  --primary: 217 95% 56%;         /* Electric Cobalt Navy (Inspired by #015294) */
+  --primary-glow: 217 95% 66%;
+  --secondary: 190 95% 45%;        /* AlloCap Cyber Teal (Inspired by #007E9E) */
+  --secondary-glow: 190 95% 55%;
+  --success: 145 70% 42%;         /* Emerald Green (Inspired by #21874c) */
+  --success-glow: 145 70% 52%;
+  --border-glow: 217 95% 56%;
+  --warning: 38 96% 52%;
+  --danger: 355 85% 60%;
+  --text-muted: 215 16% 70%;
   --text-primary: 210 40% 98%;
 
   /* Layout Variables */
   --border-radius: 16px;
-  --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-smooth: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 * {
@@ -41,7 +43,10 @@
 body {
   margin: 0;
   min-height: 100vh;
-  background: radial-gradient(circle at 50% 0%, hsl(263 50% 15%) 0%, hsl(224 71% 4%) 70%);
+  /* Premium Dark Navy Mesh Background */
+  background: radial-gradient(circle at 15% 15%, hsla(217, 95%, 56%, 0.08) 0%, transparent 45%),
+              radial-gradient(circle at 85% 85%, hsla(190, 95%, 45%, 0.06) 0%, transparent 45%),
+              linear-gradient(180deg, #050711 0%, #020306 100%);
   background-attachment: fixed;
   overflow-x: hidden;
   color: hsl(var(--text-primary));
@@ -49,41 +54,43 @@ body {
 
 /* Glassmorphism Styles */
 .glass-container {
-  background: hsla(224, 71%, 6%, 0.4);
+  background: hsla(220, 40%, 8%, 0.5);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
-  border: 1px solid hsla(224, 71%, 20%, 0.3);
+  border: 1px solid hsla(220, 40%, 25%, 0.2);
   border-radius: var(--border-radius);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
 }
 
 .glass-card {
-  background: hsla(224, 71%, 8%, 0.55);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid hsla(224, 71%, 20%, 0.35);
+  background: hsla(220, 40%, 10%, 0.45);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid hsla(220, 40%, 25%, 0.18);
   border-radius: var(--border-radius);
   transition: var(--transition-smooth);
+  box-shadow: 0 4px 20px 0 rgba(0, 0, 0, 0.2);
 }
 
 .glass-card:hover {
-  border-color: hsla(var(--border-glow), 0.4);
-  box-shadow: 0 0 25px hsla(var(--border-glow), 0.15);
+  border-color: hsla(var(--primary), 0.35);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.45), 0 0 20px hsla(var(--primary), 0.06);
   transform: translateY(-2px);
 }
 
 /* Custom Scrollbars */
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 6px;
+  height: 6px;
 }
 
 ::-webkit-scrollbar-track {
-  background: hsla(224, 71%, 4%, 0.3);
+  background: hsla(220, 40%, 6%, 0.3);
 }
 
 ::-webkit-scrollbar-thumb {
-  background: hsla(224, 71%, 20%, 0.6);
-  border-radius: 4px;
+  background: hsla(220, 40%, 25%, 0.45);
+  border-radius: 10px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
@@ -94,11 +101,11 @@ body {
 @keyframes pulse-glow {
   0%, 100% {
     opacity: 0.6;
-    box-shadow: 0 0 15px hsla(var(--border-glow), 0.2);
+    box-shadow: 0 0 15px hsla(var(--primary), 0.2);
   }
   50% {
     opacity: 1;
-    box-shadow: 0 0 30px hsla(var(--border-glow), 0.45);
+    box-shadow: 0 0 30px hsla(var(--primary), 0.4);
   }
 }
 
@@ -106,42 +113,54 @@ body {
   animation: pulse-glow 2s infinite ease-in-out;
 }
 
-/* Glow effects */
+/* Text Gradients */
 .glow-text-primary {
-  text-shadow: 0 0 10px hsla(var(--primary), 0.5);
+  text-shadow: 0 0 12px hsla(var(--primary), 0.45);
 }
 
 .glow-text-secondary {
-  text-shadow: 0 0 10px hsla(var(--secondary), 0.5);
+  text-shadow: 0 0 12px hsla(var(--secondary), 0.45);
 }
 
-/* Typography styles */
+.text-gradient {
+  background: linear-gradient(135deg, #ffffff 40%, hsla(210, 40%, 98%, 0.6) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.text-gradient-purple-teal {
+  background: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--secondary)) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* Typography - Inspired by Raleway */
 h1, h2, h3, h4, h5 {
-  font-family: 'Outfit', sans-serif;
+  font-family: 'Raleway', sans-serif;
   font-weight: 600;
   letter-spacing: -0.02em;
 }
 
-/* Utility buttons */
+/* Utility Buttons - Inspired by AlloCap style submission controls */
 .btn-primary {
-  background: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--primary-glow)) 100%);
+  background: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--secondary)) 100%);
   color: #fff;
   border: none;
   padding: 12px 24px;
   border-radius: 12px;
-  font-family: 'Outfit', sans-serif;
-  font-weight: 500;
+  font-family: 'Raleway', sans-serif;
+  font-weight: 600;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  box-shadow: 0 4px 15px hsla(var(--primary), 0.3);
+  box-shadow: 0 4px 20px hsla(var(--primary), 0.35);
   transition: var(--transition-smooth);
 }
 
 .btn-primary:hover {
   transform: translateY(-1px);
-  box-shadow: 0 6px 20px hsla(var(--primary), 0.5);
+  box-shadow: 0 8px 25px hsla(var(--primary), 0.55), 0 0 15px hsla(var(--secondary), 0.3);
   filter: brightness(1.1);
 }
 
@@ -150,19 +169,19 @@ h1, h2, h3, h4, h5 {
 }
 
 .btn-primary:disabled {
-  opacity: 0.5;
+  opacity: 0.4;
   cursor: not-allowed;
   transform: none;
   box-shadow: none;
 }
 
 .btn-secondary {
-  background: hsla(224, 71%, 15%, 0.4);
-  border: 1px solid hsla(224, 71%, 30%, 0.4);
+  background: hsla(220, 40%, 16%, 0.45);
+  border: 1px solid hsla(220, 40%, 30%, 0.35);
   color: hsl(var(--text-primary));
   padding: 12px 24px;
   border-radius: 12px;
-  font-family: 'Outfit', sans-serif;
+  font-family: 'Raleway', sans-serif;
   font-weight: 500;
   cursor: pointer;
   display: inline-flex;
@@ -172,16 +191,16 @@ h1, h2, h3, h4, h5 {
 }
 
 .btn-secondary:hover {
-  background: hsla(224, 71%, 20%, 0.6);
-  border-color: hsla(var(--border-glow), 0.4);
+  background: hsla(220, 40%, 24%, 0.6);
+  border-color: hsla(var(--primary), 0.45);
 }
 
 /* Dashboard Layout */
 .dashboard-grid {
   display: grid;
-  grid-template-columns: 320px 1fr;
+  grid-template-columns: 340px 1fr;
   gap: 24px;
-  max-width: 1600px;
+  max-width: 1680px;
   margin: 0 auto;
   padding: 24px;
   height: calc(100vh - 80px);
@@ -207,3 +226,9 @@ h1, h2, h3, h4, h5 {
   animation: spin 2s linear infinite;
 }
 
+/* Custom interactive delete button hover effects */
+.delete-btn-hover:hover {
+  background-color: rgba(239, 68, 68, 0.15) !important;
+  color: rgb(239, 68, 68) !important;
+  transform: scale(1.05);
+}

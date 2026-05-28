@@ -120,8 +120,24 @@ app.get('/api/download/:filename', (req: Request, res: Response) => {
   if (!fs.existsSync(filePath)) {
     return res.status(404).json({ error: 'File not found.' });
   }
-
   res.download(filePath, filename.split('-').slice(1).join('-'));
+});
+
+// 4.5. Delete file from local storage
+app.delete('/api/files/:filename', (req: Request, res: Response) => {
+  const { filename } = req.params;
+  const filePath = path.join(config.storageDir, filename);
+
+  if (!fs.existsSync(filePath)) {
+    return res.status(404).json({ error: 'File not found.' });
+  }
+
+  try {
+    fs.unlinkSync(filePath);
+    res.json({ success: true, message: 'File deleted successfully.' });
+  } catch (error: any) {
+    res.status(500).json({ error: `Failed to delete file: ${error.message}` });
+  }
 });
 
 // 5. Compare two documents (streaming responses)
