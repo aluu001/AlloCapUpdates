@@ -178,7 +178,7 @@ const renderRevisedDiffText = (origText: string, revText: string) => {
       {revisedSegments.map((seg, idx) => {
         if (seg.type === 'added') {
           return (
-            <span key={idx} style={{ background: '#dcfce7', color: '#15803d', padding: '1px 3px', borderRadius: '2px', fontWeight: 600 }}>
+            <span key={idx} style={{ background: '#e0f7fc', color: '#004d61', padding: '1px 3px', borderRadius: '2px', fontWeight: 600 }}>
               {seg.text}
             </span>
           );
@@ -834,7 +834,7 @@ export default function App() {
 
         {/* Center: Client / Version Context */}
         <div style={{ textAlign: 'center', flex: 1, paddingRight: '60px' }}>
-          <h2 style={{ fontSize: '14px', color: '#905F5F', fontWeight: 700, margin: 0, textTransform: 'uppercase', letterSpacing: '0.5px' }}>PCC Demo Instance</h2>
+          <h2 style={{ fontSize: '14px', color: '#905F5F', fontWeight: 700, margin: 0, textTransform: 'uppercase', letterSpacing: '0.5px' }}>PCG Demo Instance</h2>
           <p style={{ fontSize: '10px', color: '#64748b', margin: '2px 0 0', fontWeight: 500 }}>Q2 2026, Version: Audit 2.0</p>
         </div>
 
@@ -1783,7 +1783,7 @@ export default function App() {
       {/* PCG Branded Footer */}
       <footer style={{ height: '40px', background: '#002A5D', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 24px', fontSize: '11px', borderTop: '1px solid #004080', zIndex: 40, position: 'fixed', bottom: 0, left: 0, right: 0 }}>
         <div>
-          <span>AlloCap Updates 2.0 | PCC Demo Instance</span>
+          <span>AlloCap Updates 2.0 | PCG Demo Instance</span>
         </div>
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
