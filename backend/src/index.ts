@@ -70,7 +70,7 @@ app.post('/api/upload', (req: Request, res: Response) => {
     }
 
     // Extract the original display name from filename
-    const originalName = req.file.filename.split('-').slice(1).join('-');
+    const originalName = req.file.filename.split('-').slice(2).join('-');
 
     res.json({
       success: true,
@@ -95,7 +95,7 @@ app.get('/api/files', (req: Request, res: Response) => {
         const filePath = path.join(config.storageDir, filename);
         const stats = fs.statSync(filePath);
         // Exclude the timestamp prefix for display
-        const displayName = filename.split('-').slice(1).join('-');
+        const displayName = filename.split('-').slice(2).join('-');
         
         return {
           filename,
@@ -120,7 +120,7 @@ app.get('/api/download/:filename', (req: Request, res: Response) => {
   if (!fs.existsSync(filePath)) {
     return res.status(404).json({ error: 'File not found.' });
   }
-  res.download(filePath, filename.split('-').slice(1).join('-'));
+  res.download(filePath, filename.split('-').slice(2).join('-'));
 });
 
 // 4.5. Delete file from local storage
@@ -161,8 +161,8 @@ app.post('/api/compare', async (req: Request, res: Response) => {
     return res.status(404).json({ error: 'One or both files do not exist in local storage.' });
   }
 
-  const displayNameA = filenameA.split('-').slice(1).join('-');
-  const displayNameB = filenameB.split('-').slice(1).join('-');
+  const displayNameA = filenameA.split('-').slice(2).join('-');
+  const displayNameB = filenameB.split('-').slice(2).join('-');
 
   // Configure chunked streaming response headers
   res.setHeader('Content-Type', 'application/json');
@@ -213,8 +213,8 @@ app.post('/api/chat', async (req: Request, res: Response) => {
     return res.status(404).json({ error: 'One or both files do not exist in local storage.' });
   }
 
-  const displayNameA = filenameA.split('-').slice(1).join('-');
-  const displayNameB = filenameB.split('-').slice(1).join('-');
+  const displayNameA = filenameA.split('-').slice(2).join('-');
+  const displayNameB = filenameB.split('-').slice(2).join('-');
 
   let fileARef: any = null;
   let fileBRef: any = null;

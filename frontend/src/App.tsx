@@ -158,6 +158,7 @@ export default function App() {
   const [thinkingText, setThinkingText] = useState('');
 
   // Chat State
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isStorageOpen, setIsStorageOpen] = useState(false);
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
@@ -675,9 +676,31 @@ export default function App() {
       
       {/* Header Bar */}
       <header className="glass-container" style={{ padding: '8px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', height: '55px', zIndex: 30 }}>
-        {/* Left: AlloCAP Logo */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <svg width="150" height="35" viewBox="0 0 150 35" fill="none" xmlns="http://www.w3.org/2000/svg">
+        {/* Left: Hamburger Toggle & AlloCAP Logo */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <button 
+            onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+            style={{
+              background: 'none',
+              border: 'none',
+              cursor: 'pointer',
+              color: '#015294',
+              display: 'flex',
+              alignItems: 'center',
+              padding: '6px',
+              borderRadius: '4px',
+              transition: 'background-color 0.2s'
+            }}
+            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f1f5f9'}
+            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+            title={isSidebarOpen ? "Collapse Navigation" : "Expand Navigation"}
+          >
+            <svg width="18" height="18" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M3 5H17M3 10H17M3 15H17" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+            </svg>
+          </button>
+
+          <svg width="130" height="30" viewBox="0 0 150 35" fill="none" xmlns="http://www.w3.org/2000/svg">
             <g transform="translate(0, 2)">
               <path d="M4 28V10C4 8.89543 4.89543 8 6 8H9C10.1046 8 11 8.89543 11 10V28" stroke="#21874c" strokeWidth="2.5" strokeLinecap="round" />
               <path d="M11 28V6C11 4.89543 11.8954 4 13 4H16C17.1046 4 18 4.89543 18 6V28" stroke="#015294" strokeWidth="2.5" strokeLinecap="round" />
@@ -722,7 +745,14 @@ export default function App() {
       <main className="dashboard-grid">
         
         {/* Left Navigation Sidebar */}
-        <aside className="app-sidebar">
+        <aside 
+          className="app-sidebar"
+          style={{
+            marginLeft: isSidebarOpen ? '0' : '-240px',
+            transform: isSidebarOpen ? 'translateX(0)' : 'translateX(-100%)',
+            transition: 'margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1), transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
+          }}
+        >
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1px', padding: '12px 0' }}>
             
             <button className="nav-menu-item">
@@ -798,7 +828,13 @@ export default function App() {
         </aside>
 
         {/* Slide-out Storage Drawer */}
-        <div className={`storage-drawer ${isStorageOpen ? 'open' : ''}`}>
+        <div 
+          className={`storage-drawer ${isStorageOpen ? 'open' : ''}`}
+          style={{
+            left: isSidebarOpen ? '240px' : '0px',
+            transition: 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), left 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
+          }}
+        >
           <div style={{ padding: '16px 20px', borderBottom: '1px solid #cbd5e1', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div>
               <h3 style={{ fontSize: '14px', fontWeight: 700, margin: 0, color: '#203865' }}>Document Storage</h3>
@@ -886,12 +922,12 @@ export default function App() {
                     >
                       {/* Left: Icon and wrapped filename */}
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px', overflow: 'hidden', flex: 1 }}>
-                        <FileText size={15} style={{ color: isSelectedA ? '#015294' : isSelectedB ? '#007E9E' : '#64748b', flexShrink: 0 }} />
+                        <FileText size={14} style={{ color: isSelectedA ? '#015294' : isSelectedB ? '#007E9E' : '#64748b', flexShrink: 0 }} />
                         <div style={{ display: 'flex', flexDirection: 'column', textAlign: 'left', minWidth: 0, flex: 1 }}>
-                          <span style={{ fontSize: '12px', fontWeight: 600, color: '#1e293b', whiteSpace: 'normal', wordBreak: 'break-all', lineHeight: '1.3' }}>
+                          <span style={{ fontSize: '11px', fontWeight: 600, color: '#1e293b', whiteSpace: 'normal', wordBreak: 'break-all', lineHeight: '1.3' }}>
                             {file.displayName}
                           </span>
-                          <span style={{ fontSize: '10px', color: '#64748b', marginTop: '2px' }}>{formatBytes(file.size)}</span>
+                          <span style={{ fontSize: '9.5px', color: '#64748b', marginTop: '2px' }}>{formatBytes(file.size)}</span>
                         </div>
                       </div>
                       
@@ -903,23 +939,19 @@ export default function App() {
                             if (isSelectedB) setFileB(null);
                           }}
                           style={{
-                            width: '20px',
-                            height: '20px',
-                            borderRadius: '50%',
-                            fontSize: '9px',
+                            padding: '3px 8px',
+                            borderRadius: '12px',
+                            fontSize: '10px',
                             fontWeight: 700,
                             cursor: 'pointer',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
                             border: isSelectedA ? 'none' : '1px solid rgba(1, 82, 148, 0.4)',
                             background: isSelectedA ? '#015294' : 'transparent',
                             color: isSelectedA ? '#fff' : '#015294',
                             transition: 'all 0.2s'
                           }}
-                          title={isSelectedA ? "Unselect Original" : "Set as Original (A)"}
+                          title={isSelectedA ? "Unselect Original" : "Set as Original"}
                         >
-                          A
+                          Original
                         </button>
                         
                         <button
@@ -928,30 +960,26 @@ export default function App() {
                             if (isSelectedA) setFileA(null);
                           }}
                           style={{
-                            width: '20px',
-                            height: '20px',
-                            borderRadius: '50%',
-                            fontSize: '9px',
+                            padding: '3px 8px',
+                            borderRadius: '12px',
+                            fontSize: '10px',
                             fontWeight: 700,
                             cursor: 'pointer',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
                             border: isSelectedB ? 'none' : '1px solid rgba(0, 126, 158, 0.4)',
                             background: isSelectedB ? '#007E9E' : 'transparent',
                             color: isSelectedB ? '#fff' : '#007E9E',
                             transition: 'all 0.2s'
                           }}
-                          title={isSelectedB ? "Unselect Revised" : "Set as Revised (B)"}
+                          title={isSelectedB ? "Unselect Revised" : "Set as Revised"}
                         >
-                          B
+                          Revised
                         </button>
                         
                         <a 
                           href={`${API_BASE}/download/${file.filename}`}
                           style={{ 
-                            width: '20px',
-                            height: '20px',
+                            width: '22px',
+                            height: '22px',
                             borderRadius: '50%',
                             display: 'flex',
                             alignItems: 'center',
@@ -975,8 +1003,8 @@ export default function App() {
                             }
                           }}
                           style={{
-                            width: '20px',
-                            height: '20px',
+                            width: '22px',
+                            height: '22px',
                             borderRadius: '50%',
                             display: 'flex',
                             alignItems: 'center',
@@ -1004,11 +1032,11 @@ export default function App() {
         {/* Workspace Content Panel */}
         <div className="workspace-content">
           
-          {/* Top-level Configuration Card (Slots A/B & Compare Button) */}
+          {/* Top-level Configuration Card (Slots selectors & Compare Button) */}
           <div className="glass-card" style={{ padding: '16px', marginBottom: '20px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
               
-              {/* Slot A: Original */}
+              {/* Slot: Original Select dropdown */}
               <div 
                 style={{ 
                   padding: '12px 16px', 
@@ -1017,30 +1045,44 @@ export default function App() {
                   background: fileA ? 'rgba(1, 82, 148, 0.04)' : '#f8fafc',
                   borderRadius: '6px',
                   display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  gap: '12px'
+                  flexDirection: 'column',
+                  gap: '8px'
                 }}
               >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', overflow: 'hidden', flex: 1 }}>
-                  <div style={{ width: '28px', height: '28px', borderRadius: '4px', background: fileA ? '#015294' : '#cbd5e1', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                    <FileText size={14} color="#fff" />
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <div style={{ width: '24px', height: '24px', borderRadius: '4px', background: fileA ? '#015294' : '#cbd5e1', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <FileText size={12} color="#fff" />
                   </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0, flex: 1 }}>
-                    <div style={{ fontSize: '10px', textTransform: 'uppercase', color: '#64748b', fontWeight: 600 }}>Original Document (A)</div>
-                    <div style={{ fontSize: '12px', fontWeight: 600, color: fileA ? '#1e293b' : '#94a3b8', whiteSpace: 'normal', wordBreak: 'break-all' }}>
-                      {fileA ? files.find(f => f.filename === fileA)?.displayName : "No document selected"}
-                    </div>
-                  </div>
+                  <span style={{ fontSize: '11px', textTransform: 'uppercase', color: '#64748b', fontWeight: 700 }}>Original Document</span>
                 </div>
-                {fileA && (
-                  <button onClick={() => setFileA(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748b', display: 'flex', padding: '4px' }}>
-                    <X size={14} />
-                  </button>
-                )}
+                <select
+                  value={fileA || ''}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setFileA(val ? val : null);
+                    if (val === fileB) setFileB(null); // Clear conflict
+                  }}
+                  style={{
+                    width: '100%',
+                    padding: '8px 12px',
+                    borderRadius: '4px',
+                    border: '1px solid #cbd5e1',
+                    background: '#ffffff',
+                    fontSize: '12.5px',
+                    color: '#323639',
+                    fontWeight: 500,
+                    outline: 'none',
+                    cursor: 'pointer'
+                  }}
+                >
+                  <option value="">-- Choose Original File --</option>
+                  {files.map(f => (
+                    <option key={f.filename} value={f.filename}>{f.displayName}</option>
+                  ))}
+                </select>
               </div>
 
-              {/* Slot B: Revised */}
+              {/* Slot: Revised Select dropdown */}
               <div 
                 style={{ 
                   padding: '12px 16px', 
@@ -1049,27 +1091,41 @@ export default function App() {
                   background: fileB ? 'rgba(0, 126, 158, 0.04)' : '#f8fafc',
                   borderRadius: '6px',
                   display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  gap: '12px'
+                  flexDirection: 'column',
+                  gap: '8px'
                 }}
               >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', overflow: 'hidden', flex: 1 }}>
-                  <div style={{ width: '28px', height: '28px', borderRadius: '4px', background: fileB ? '#007E9E' : '#cbd5e1', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                    <FileText size={14} color="#fff" />
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <div style={{ width: '24px', height: '24px', borderRadius: '4px', background: fileB ? '#007E9E' : '#cbd5e1', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <FileText size={12} color="#fff" />
                   </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0, flex: 1 }}>
-                    <div style={{ fontSize: '10px', textTransform: 'uppercase', color: '#64748b', fontWeight: 600 }}>Revised Document (B)</div>
-                    <div style={{ fontSize: '12px', fontWeight: 600, color: fileB ? '#1e293b' : '#94a3b8', whiteSpace: 'normal', wordBreak: 'break-all' }}>
-                      {fileB ? files.find(f => f.filename === fileB)?.displayName : "No document selected"}
-                    </div>
-                  </div>
+                  <span style={{ fontSize: '11px', textTransform: 'uppercase', color: '#64748b', fontWeight: 700 }}>Revised Document</span>
                 </div>
-                {fileB && (
-                  <button onClick={() => setFileB(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748b', display: 'flex', padding: '4px' }}>
-                    <X size={14} />
-                  </button>
-                )}
+                <select
+                  value={fileB || ''}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setFileB(val ? val : null);
+                    if (val === fileA) setFileA(null); // Clear conflict
+                  }}
+                  style={{
+                    width: '100%',
+                    padding: '8px 12px',
+                    borderRadius: '4px',
+                    border: '1px solid #cbd5e1',
+                    background: '#ffffff',
+                    fontSize: '12.5px',
+                    color: '#323639',
+                    fontWeight: 500,
+                    outline: 'none',
+                    cursor: 'pointer'
+                  }}
+                >
+                  <option value="">-- Choose Revised File --</option>
+                  {files.map(f => (
+                    <option key={f.filename} value={f.filename}>{f.displayName}</option>
+                  ))}
+                </select>
               </div>
             </div>
 
@@ -1181,7 +1237,7 @@ export default function App() {
                 <div style={{ maxWidth: '520px' }}>
                   <h2 style={{ fontSize: '20px', color: '#203865', marginBottom: '8px' }}>Automated Comparison Workspace</h2>
                   <p style={{ fontSize: '13px', color: '#64748b', lineHeight: 1.6 }}>
-                    Open the **Document Storage** drawer to upload files. Select the **Original (A)** and **Revised (B)** documents, then click **Compare Documents** to run the comparison.
+                    Select the **Original Document** and **Revised Document** from the dropdowns above (or upload new files in the **Document Storage** drawer on the left), then click **Compare Documents** to run the comparison.
                   </p>
                 </div>
                 
