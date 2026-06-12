@@ -345,6 +345,11 @@ h1, h2, h3, h4, h5 {
 }
 
 @media print {
+  @page {
+    size: letter;
+    margin: 0.5in !important;
+  }
+
   body, html {
     background: #ffffff !important;
     color: #0f172a !important;
@@ -362,6 +367,7 @@ h1, h2, h3, h4, h5 {
     height: auto !important;
     overflow: visible !important;
     display: block !important;
+    width: 100% !important;
   }
 
   .workspace-content {
@@ -371,6 +377,13 @@ h1, h2, h3, h4, h5 {
     height: auto !important;
     overflow: visible !important;
     display: block !important;
+    width: 100% !important;
+  }
+
+  .no-print-grid {
+    display: block !important;
+    width: 100% !important;
+    height: auto !important;
   }
 
   .report-preview-container {
@@ -380,6 +393,7 @@ h1, h2, h3, h4, h5 {
     overflow: visible !important;
     display: block !important;
     box-shadow: none !important;
+    width: 100% !important;
   }
 
   .report-paper-page {
