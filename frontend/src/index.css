@@ -315,3 +315,87 @@ h1, h2, h3, h4, h5 {
   margin: 2px 12px;
   width: calc(100% - 24px);
 }
+
+/* Simulated Paper and Print Styles for Report Publisher */
+.report-preview-container {
+  background: #e2e8f0;
+  padding: 30px 15px;
+  overflow-y: auto;
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  border-radius: 6px;
+  box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.report-paper-page {
+  background: #ffffff;
+  width: 100%;
+  max-width: 800px;
+  min-height: 1050px;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.08);
+  padding: 40px 50px;
+  border: 1px solid #cbd5e1;
+  border-radius: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  position: relative;
+  text-align: left;
+}
+
+@media print {
+  body, html {
+    background: #ffffff !important;
+    color: #0f172a !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 100% !important;
+    height: auto !important;
+  }
+  
+  header, footer, aside, .storage-drawer, .report-settings-panel, button, .no-print {
+    display: none !important;
+  }
+
+  .dashboard-grid {
+    height: auto !important;
+    overflow: visible !important;
+    display: block !important;
+  }
+
+  .workspace-content {
+    padding: 0 !important;
+    margin: 0 !important;
+    background: #ffffff !important;
+    height: auto !important;
+    overflow: visible !important;
+    display: block !important;
+  }
+
+  .report-preview-container {
+    background: #ffffff !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    overflow: visible !important;
+    display: block !important;
+    box-shadow: none !important;
+  }
+
+  .report-paper-page {
+    box-shadow: none !important;
+    border: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-height: auto !important;
+    display: block !important;
+  }
+
+  .print-section {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+    margin-bottom: 20px !important;
+  }
+}

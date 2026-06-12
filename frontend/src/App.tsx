@@ -291,6 +291,20 @@ export default function App() {
   // Tabs
   const [activeTab, setActiveTab] = useState<'summary' | 'text' | 'tables' | 'visuals'>('summary');
 
+  // Navigation Page State
+  const [activePage, setActivePage] = useState<'compare' | 'publisher'>('compare');
+
+  // Publisher Metadata State
+  const [publisherTitle, setPublisherTitle] = useState('PCG Document Comparison & Audit Report');
+  const [auditorName, setAuditorName] = useState('Lead Auditor');
+  const [auditorDept, setAuditorDept] = useState('Audit & Compliance Team');
+  const [auditDate, setAuditDate] = useState(new Date().toISOString().split('T')[0]);
+  const [auditNotes, setAuditNotes] = useState('The documents have been compared and reviewed. All identified modifications, deletions, and additions have been audited and logged below. The final version is approved for SharePoint filing.');
+  const [includeTextChanges, setIncludeTextChanges] = useState(true);
+  const [includeTableChanges, setIncludeTableChanges] = useState(true);
+  const [includeVisualChanges, setIncludeVisualChanges] = useState(true);
+  const [isCopied, setIsCopied] = useState(false);
+
   const fileInputRef = useRef<HTMLInputElement>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
   const thinkingConsoleRef = useRef<HTMLDivElement>(null);
@@ -790,6 +804,232 @@ export default function App() {
     }
   };
 
+  const copyHTMLReport = () => {
+    if (!report) return;
+
+    const getSeverityColorHex = (sev: 'low' | 'medium' | 'high') => {
+      switch (sev) {
+        case 'high': return '#dc2626';
+        case 'medium': return '#d97706';
+        default: return '#16a34a';
+      }
+    };
+
+    const escapeHtml = (text: string) => {
+      return text
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    };
+
+    const getDiffHtml = (origText: string, revText: string, side: 'orig' | 'rev') => {
+      const { originalSegments, revisedSegments } = computeWordDiff(origText, revText);
+      const segments = side === 'orig' ? originalSegments : revisedSegments;
+      return segments.map(seg => {
+        if (seg.type === 'removed' && side === 'orig') {
+          return `<span style="background-color: #ffe2e2; color: #b91c1c; text-decoration: line-through; padding: 1px 3px; border-radius: 2px; font-weight: 600;">${escapeHtml(seg.text)}</span>`;
+        }
+        if (seg.type === 'added' && side === 'rev') {
+          return `<span style="background-color: #fef08a; color: #713f12; padding: 1px 3px; border-radius: 2px; font-weight: 600;">${escapeHtml(seg.text)}</span>`;
+        }
+        return escapeHtml(seg.text);
+      }).join('');
+    };
+
+    let html = `
+      <div style="font-family: Arial, sans-serif; color: #323639; max-width: 800px; margin: 0 auto; padding: 20px; text-align: left; background-color: #ffffff;">
+        <div style="border-bottom: 2px solid #002A5D; padding-bottom: 15px; margin-bottom: 20px;">
+          <h1 style="font-family: Arial, sans-serif; font-size: 24px; color: #002A5D; margin: 0; font-weight: bold;">${escapeHtml(publisherTitle)}</h1>
+          <p style="font-size: 13px; color: #475569; margin: 5px 0 0 0;">Formal comparison audit report of corporate documentation.</p>
+        </div>
+
+        <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 13px;">
+          <tr style="background-color: #f8fafc;">
+            <td style="padding: 10px; border: 1px solid #cbd5e1; font-weight: bold; color: #475569; width: 20%;">Original File</td>
+            <td style="padding: 10px; border: 1px solid #cbd5e1; color: #0f172a;">${escapeHtml(files.find(f => f.filename === fileA)?.displayName || fileA || '')}</td>
+          </tr>
+          <tr>
+            <td style="padding: 10px; border: 1px solid #cbd5e1; font-weight: bold; color: #475569;">Revised File</td>
+            <td style="padding: 10px; border: 1px solid #cbd5e1; color: #0f172a;">${escapeHtml(files.find(f => f.filename === fileB)?.displayName || fileB || '')}</td>
+          </tr>
+          <tr style="background-color: #f8fafc;">
+            <td style="padding: 10px; border: 1px solid #cbd5e1; font-weight: bold; color: #475569;">Lead Auditor</td>
+            <td style="padding: 10px; border: 1px solid #cbd5e1; color: #0f172a;">${escapeHtml(auditorName)}</td>
+          </tr>
+          <tr>
+            <td style="padding: 10px; border: 1px solid #cbd5e1; font-weight: bold; color: #475569;">Department</td>
+            <td style="padding: 10px; border: 1px solid #cbd5e1; color: #0f172a;">${escapeHtml(auditorDept)}</td>
+          </tr>
+          <tr style="background-color: #f8fafc;">
+            <td style="padding: 10px; border: 1px solid #cbd5e1; font-weight: bold; color: #475569;">Audit Date</td>
+            <td style="padding: 10px; border: 1px solid #cbd5e1; color: #0f172a;">${escapeHtml(auditDate)}</td>
+          </tr>
+          <tr>
+            <td style="padding: 10px; border: 1px solid #cbd5e1; font-weight: bold; color: #475569;">Risk Rating</td>
+            <td style="padding: 10px; border: 1px solid #cbd5e1; color: ${getSeverityColorHex(report.riskRating)}; font-weight: bold; text-transform: uppercase;">
+              ${report.riskRating} RISK
+            </td>
+          </tr>
+        </table>
+
+        <div style="margin-bottom: 25px;">
+          <h2 style="font-size: 16px; color: #002A5D; border-bottom: 1px solid #cbd5e1; padding-bottom: 5px; font-weight: bold;">1. Executive Summary</h2>
+          <p style="font-size: 13px; line-height: 1.6; color: #334155; margin: 10px 0 0 0;">${escapeHtml(report.overallSummary)}</p>
+        </div>
+    `;
+
+    if (includeTextChanges) {
+      html += `
+        <div style="margin-bottom: 25px;">
+          <h2 style="font-size: 16px; color: #002A5D; border-bottom: 1px solid #cbd5e1; padding-bottom: 5px; font-weight: bold;">2. Text Modifications</h2>
+      `;
+      if (report.textChanges.length === 0) {
+        html += `<p style="font-size: 13px; color: #64748b; font-style: italic;">No text modifications identified.</p>`;
+      } else {
+        report.textChanges.forEach((change, idx) => {
+          html += `
+            <div style="border: 1px solid #cbd5e1; border-radius: 4px; padding: 12px; margin-top: 15px; font-size: 13px;">
+              <div style="display: flex; justify-content: space-between; font-size: 11px; font-weight: bold; color: #475569; margin-bottom: 8px;">
+                <span>Page ${escapeHtml(change.page)} • Change #${idx + 1}</span>
+                <span style="color: ${getSeverityColorHex(change.severity)}; text-transform: uppercase;">${change.severity} Severity</span>
+              </div>
+              <p style="font-weight: bold; color: #0f172a; margin: 0 0 10px 0;">${escapeHtml(change.description)}</p>
+              <table style="width: 100%; border-collapse: collapse; font-size: 12px;">
+                <tr>
+                  <td style="width: 50%; padding: 8px; border: 1px solid #cbd5e1; vertical-align: top; background-color: ${change.type === 'added' ? 'transparent' : '#fef2f2'};">
+                    <div style="font-size: 10px; font-weight: bold; color: ${change.type === 'added' ? '#64748b' : '#ef4444'}; text-transform: uppercase; margin-bottom: 4px;">Original</div>
+                    ${change.type === 'added' ? '<span style="color: #94a3b8; font-style: italic;">[No text existed]</span>' : getDiffHtml(change.originalText || '', change.revisedText || '', 'orig')}
+                  </td>
+                  <td style="width: 50%; padding: 8px; border: 1px solid #cbd5e1; vertical-align: top; background-color: ${change.type === 'deleted' ? 'transparent' : '#f0fdf4'};">
+                    <div style="font-size: 10px; font-weight: bold; color: ${change.type === 'deleted' ? '#64748b' : '#21874c'}; text-transform: uppercase; margin-bottom: 4px;">Revised</div>
+                    ${change.type === 'deleted' ? '<span style="color: #94a3b8; font-style: italic;">[Clause deleted]</span>' : getDiffHtml(change.originalText || '', change.revisedText || '', 'rev')}
+                  </td>
+                </tr>
+              </table>
+            </div>
+          `;
+        });
+      }
+      html += `</div>`;
+    }
+
+    if (includeTableChanges) {
+      html += `
+        <div style="margin-bottom: 25px;">
+          <h2 style="font-size: 16px; color: #002A5D; border-bottom: 1px solid #cbd5e1; padding-bottom: 5px; font-weight: bold;">3. Table Modifications</h2>
+      `;
+      if (report.tableChanges.length === 0) {
+        html += `<p style="font-size: 13px; color: #64748b; font-style: italic;">No table modifications identified.</p>`;
+      } else {
+        report.tableChanges.forEach((change) => {
+          html += `
+            <div style="border: 1px solid #cbd5e1; border-radius: 4px; padding: 12px; margin-top: 15px; font-size: 13px;">
+              <div style="display: flex; justify-content: space-between; font-size: 11px; font-weight: bold; color: #475569; margin-bottom: 8px;">
+                <span>Page ${escapeHtml(change.page)} • ${escapeHtml(change.tableName)}</span>
+                <span style="color: ${getSeverityColorHex(change.severity)}; text-transform: uppercase;">${change.severity} Severity</span>
+              </div>
+              <p style="font-weight: bold; color: #0f172a; margin: 0 0 10px 0;">${escapeHtml(change.description)}</p>
+              <table style="width: 100%; border-collapse: collapse; font-size: 12px;">
+                <tr>
+                  <td style="width: 50%; padding: 8px; border: 1px solid #cbd5e1; vertical-align: top; background-color: ${!change.originalText ? 'transparent' : '#fef2f2'};">
+                    <div style="font-size: 10px; font-weight: bold; color: ${!change.originalText ? '#64748b' : '#ef4444'}; text-transform: uppercase; margin-bottom: 4px;">Original</div>
+                    ${!change.originalText ? '<span style="color: #94a3b8; font-style: italic;">[No row/cell existed]</span>' : getDiffHtml(change.originalText || '', change.revisedText || '', 'orig')}
+                  </td>
+                  <td style="width: 50%; padding: 8px; border: 1px solid #cbd5e1; vertical-align: top; background-color: ${!change.revisedText ? 'transparent' : '#f0fdf4'};">
+                    <div style="font-size: 10px; font-weight: bold; color: ${!change.revisedText ? '#64748b' : '#21874c'}; text-transform: uppercase; margin-bottom: 4px;">Revised</div>
+                    ${!change.revisedText ? '<span style="color: #94a3b8; font-style: italic;">[Row/cell deleted]</span>' : getDiffHtml(change.originalText || '', change.revisedText || '', 'rev')}
+                  </td>
+                </tr>
+              </table>
+            </div>
+          `;
+        });
+      }
+      html += `</div>`;
+    }
+
+    if (includeVisualChanges) {
+      html += `
+        <div style="margin-bottom: 25px;">
+          <h2 style="font-size: 16px; color: #002A5D; border-bottom: 1px solid #cbd5e1; padding-bottom: 5px; font-weight: bold;">4. Visual & Layout Modifications</h2>
+      `;
+      if (report.visualChanges.length === 0) {
+        html += `<p style="font-size: 13px; color: #64748b; font-style: italic;">No visual modifications identified.</p>`;
+      } else {
+        report.visualChanges.forEach((change) => {
+          html += `
+            <div style="border: 1px solid #cbd5e1; border-radius: 4px; padding: 12px; margin-top: 15px; font-size: 13px;">
+              <div style="display: flex; justify-content: space-between; font-size: 11px; font-weight: bold; color: #475569; margin-bottom: 8px;">
+                <span>Page ${escapeHtml(change.page)} • ${escapeHtml(change.type.replace('_', ' ').toUpperCase())}</span>
+                <span style="color: ${getSeverityColorHex(change.severity)}; text-transform: uppercase;">${change.severity} Severity</span>
+              </div>
+              <p style="font-weight: bold; color: #0f172a; margin: 0 0 10px 0;">${escapeHtml(change.description)}</p>
+              <table style="width: 100%; border-collapse: collapse; font-size: 12px;">
+                <tr>
+                  <td style="width: 50%; padding: 8px; border: 1px solid #cbd5e1; vertical-align: top; background-color: ${!change.originalText ? 'transparent' : '#fef2f2'};">
+                    <div style="font-size: 10px; font-weight: bold; color: ${!change.originalText ? '#64748b' : '#ef4444'}; text-transform: uppercase; margin-bottom: 4px;">Original</div>
+                    ${!change.originalText ? '<span style="color: #94a3b8; font-style: italic;">[No visual element existed]</span>' : getDiffHtml(change.originalText || '', change.revisedText || '', 'orig')}
+                  </td>
+                  <td style="width: 50%; padding: 8px; border: 1px solid #cbd5e1; vertical-align: top; background-color: ${!change.revisedText ? 'transparent' : '#f0fdf4'};">
+                    <div style="font-size: 10px; font-weight: bold; color: ${!change.revisedText ? '#64748b' : '#21874c'}; text-transform: uppercase; margin-bottom: 4px;">Revised</div>
+                    ${!change.revisedText ? '<span style="color: #94a3b8; font-style: italic;">[Visual element deleted]</span>' : getDiffHtml(change.originalText || '', change.revisedText || '', 'rev')}
+                  </td>
+                </tr>
+              </table>
+            </div>
+          `;
+        });
+      }
+      html += `</div>`;
+    }
+
+    if (auditNotes.trim()) {
+      html += `
+        <div style="margin-top: 30px; border-top: 2px solid #cbd5e1; padding-top: 15px;">
+          <h2 style="font-size: 16px; color: #002A5D; font-weight: bold; margin-bottom: 10px;">5. Compliance Notes & Audit Sign-Off</h2>
+          <p style="font-size: 13px; line-height: 1.6; color: #334155; margin: 0 0 20px 0; font-style: italic;">${escapeHtml(auditNotes)}</p>
+          
+          <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+            <tr>
+              <td style="width: 50%; padding-top: 30px; padding-bottom: 5px; border-bottom: 1px solid #cbd5e1;"></td>
+              <td style="width: 10%; padding-top: 30px; padding-bottom: 5px;"></td>
+              <td style="width: 40%; padding-top: 30px; padding-bottom: 5px; border-bottom: 1px solid #cbd5e1;"></td>
+            </tr>
+            <tr>
+              <td style="font-size: 11px; color: #475569; padding-top: 5px;">Auditor Signature: ${escapeHtml(auditorName)}</td>
+              <td></td>
+              <td style="font-size: 11px; color: #475569; padding-top: 5px;">Date: ${escapeHtml(auditDate)}</td>
+            </tr>
+          </table>
+        </div>
+      `;
+    }
+
+    html += `
+      </div>
+    `;
+
+    try {
+      const blob = new Blob([html], { type: 'text/html' });
+      const textBlob = new Blob([html.replace(/<[^>]+>/g, '')], { type: 'text/plain' });
+      const item = new (window as any).ClipboardItem({
+        'text/html': blob,
+        'text/plain': textBlob
+      });
+      (navigator.clipboard as any).write([item]).then(() => {
+        setIsCopied(true);
+        setTimeout(() => setIsCopied(false), 3000);
+      });
+    } catch (err) {
+      navigator.clipboard.writeText(html).then(() => {
+        setIsCopied(true);
+        setTimeout(() => setIsCopied(false), 3000);
+      });
+    }
+  };
+
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', background: '#f0f2f3', color: '#323639' }}>
       
@@ -908,9 +1148,28 @@ export default function App() {
                 Allocation Types
               </button>
               
-              {/* Compare Workspace - Active Item */}
-              <button className="nav-sub-item active">
+              <button className="nav-sub-item">
+                Department Types
+              </button>
+              
+              <button className="nav-sub-item">
+                Allocation Types
+              </button>
+              
+              {/* Compare Workspace */}
+              <button 
+                className={`nav-sub-item ${activePage === 'compare' ? 'active' : ''}`}
+                onClick={() => setActivePage('compare')}
+              >
                 Compare Workspace
+              </button>
+
+              {/* Audit Report Publisher */}
+              <button 
+                className={`nav-sub-item ${activePage === 'publisher' ? 'active' : ''}`}
+                onClick={() => setActivePage('publisher')}
+              >
+                📜 Audit Report Publisher
               </button>
               
               {/* Document Storage Slide Toggler */}
@@ -1158,519 +1417,909 @@ export default function App() {
 
         {/* Workspace Content Panel */}
         <div className="workspace-content">
-          
-          {/* Top-level Configuration Card (Slots selectors & Compare Button) */}
-          <div className="glass-card" style={{ padding: '16px', marginBottom: '20px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-              
-              {/* Slot: Original Select dropdown */}
-              <div 
-                style={{ 
-                  padding: '12px 16px', 
-                  border: '1px solid',
-                  borderColor: fileA ? '#015294' : '#cbd5e1',
-                  background: fileA ? 'rgba(1, 82, 148, 0.04)' : '#f8fafc',
-                  borderRadius: '6px',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '8px'
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <div style={{ width: '24px', height: '24px', borderRadius: '4px', background: fileA ? '#015294' : '#cbd5e1', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                    <FileText size={12} color="#fff" />
-                  </div>
-                  <span style={{ fontSize: '11px', textTransform: 'uppercase', color: '#64748b', fontWeight: 700 }}>Original Document</span>
-                </div>
-                <select
-                  value={fileA || ''}
-                  onChange={(e) => {
-                    const val = e.target.value;
-                    setFileA(val ? val : null);
-                    if (val === fileB) setFileB(null); // Clear conflict
-                  }}
-                  style={{
-                    width: '100%',
-                    padding: '8px 12px',
-                    borderRadius: '4px',
-                    border: '1px solid #cbd5e1',
-                    background: '#ffffff',
-                    fontSize: '12.5px',
-                    color: '#323639',
-                    fontWeight: 500,
-                    outline: 'none',
-                    cursor: 'pointer'
-                  }}
-                >
-                  <option value="">-- Choose Original File --</option>
-                  {files.map(f => (
-                    <option key={f.filename} value={f.filename}>{f.displayName}</option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Slot: Revised Select dropdown */}
-              <div 
-                style={{ 
-                  padding: '12px 16px', 
-                  border: '1px solid',
-                  borderColor: fileB ? '#007E9E' : '#cbd5e1',
-                  background: fileB ? 'rgba(0, 126, 158, 0.04)' : '#f8fafc',
-                  borderRadius: '6px',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '8px'
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <div style={{ width: '24px', height: '24px', borderRadius: '4px', background: fileB ? '#007E9E' : '#cbd5e1', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                    <FileText size={12} color="#fff" />
-                  </div>
-                  <span style={{ fontSize: '11px', textTransform: 'uppercase', color: '#64748b', fontWeight: 700 }}>Revised Document</span>
-                </div>
-                <select
-                  value={fileB || ''}
-                  onChange={(e) => {
-                    const val = e.target.value;
-                    setFileB(val ? val : null);
-                    if (val === fileA) setFileA(null); // Clear conflict
-                  }}
-                  style={{
-                    width: '100%',
-                    padding: '8px 12px',
-                    borderRadius: '4px',
-                    border: '1px solid #cbd5e1',
-                    background: '#ffffff',
-                    fontSize: '12.5px',
-                    color: '#323639',
-                    fontWeight: 500,
-                    outline: 'none',
-                    cursor: 'pointer'
-                  }}
-                >
-                  <option value="">-- Choose Revised File --</option>
-                  {files.map(f => (
-                    <option key={f.filename} value={f.filename}>{f.displayName}</option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
-            {/* Main Action Button */}
-            <button 
-              onClick={handleCompare}
-              disabled={!fileA || !fileB || isLoading}
-              className="btn-primary"
-              style={{ width: '100%', justifyContent: 'center', padding: '10px 0', fontSize: '13px', borderRadius: '4px' }}
-            >
-              {isLoading ? (
-                <>
-                  <RefreshCw size={14} className="spin" style={{ color: '#fff' }} />
-                  <span>Auditing Comparison...</span>
-                </>
-              ) : (
-                <>
-                  <span>Compare Documents</span>
-                  <ArrowRight size={14} />
-                </>
-              )}
-            </button>
-          </div>
-
-          {/* Core Content Area */}
-          <div style={{ position: 'relative', minHeight: '400px' }}>
-            
-            {/* 1. Loading Panel */}
-            {isLoading && (
-              <div style={{ position: 'absolute', inset: 0, background: 'rgba(255, 255, 255, 0.96)', backdropFilter: 'blur(8px)', zIndex: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px', borderRadius: 'var(--border-radius)' }}>
-                <div style={{ maxWidth: '860px', width: '100%', display: 'grid', gridTemplateColumns: '1fr 1.2fr', gap: '32px', alignItems: 'start' }}>
+          {activePage === 'compare' ? (
+            <>
+              {/* Top-level Configuration Card (Slots selectors & Compare Button) */}
+              <div className="glass-card" style={{ padding: '16px', marginBottom: '20px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                   
-                  {/* Left: Progress stepper */}
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                      <div style={{ position: 'relative', width: '48px', height: '48px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                        <div style={{ position: 'absolute', inset: 0, border: '3px solid rgba(1, 82, 148, 0.1)', borderRadius: '50%' }}></div>
-                        <div style={{ position: 'absolute', inset: 0, border: '3px solid transparent', borderTopColor: '#015294', borderRightColor: '#007E9E', borderRadius: '50%', animation: 'spin 1.2s cubic-bezier(0.5, 0, 0.5, 1) infinite' }}></div>
-                        <FileCheck size={16} style={{ color: '#015294' }} />
+                  {/* Slot: Original Select dropdown */}
+                  <div 
+                    style={{ 
+                      padding: '12px 16px', 
+                      border: '1px solid',
+                      borderColor: fileA ? '#015294' : '#cbd5e1',
+                      background: fileA ? 'rgba(1, 82, 148, 0.04)' : '#f8fafc',
+                      borderRadius: '6px',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '8px'
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <div style={{ width: '24px', height: '24px', borderRadius: '4px', background: fileA ? '#015294' : '#cbd5e1', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                        <FileText size={12} color="#fff" />
                       </div>
-                      <div style={{ textAlign: 'left' }}>
-                        <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#203865', margin: 0 }}>
-                          Comparing Documents
-                        </h3>
-                        <p style={{ fontSize: '11px', color: '#64748b', margin: '2px 0 0' }}>Analyzing clauses & structures...</p>
-                      </div>
+                      <span style={{ fontSize: '11px', textTransform: 'uppercase', color: '#64748b', fontWeight: 700 }}>Original Document</span>
                     </div>
-
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', textAlign: 'left', background: '#f8fafc', border: '1px solid #cbd5e1', padding: '20px', borderRadius: '6px', boxShadow: 'inset 0 1px 3px rgba(0,0,0,0.02)' }}>
-                      {[
-                        "Initializing Original Document...",
-                        "Initializing Revised Document...",
-                        "Analyzing document layout...",
-                        "Comparing text and clauses...",
-                        "Generating comparison report..."
-                      ].map((step, idx) => {
-                        const isDone = loadingStep > idx;
-                        const isActive = loadingStep === idx;
-                        
-                        return (
-                          <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '12px', opacity: isDone || isActive ? 1 : 0.4, transition: 'opacity 0.3s' }}>
-                            {isDone ? (
-                              <div style={{ width: '18px', height: '18px', borderRadius: '50%', background: '#21874c', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: '10px', fontWeight: 'bold', flexShrink: 0 }}>✓</div>
-                            ) : isActive ? (
-                              <RefreshCw size={14} className="spin" style={{ color: '#015294', display: 'inline-block', flexShrink: 0 }} />
-                            ) : (
-                              <RefreshCw size={14} style={{ color: '#cbd5e1', display: 'inline-block', flexShrink: 0 }} />
-                            )}
-                            <span style={{ fontSize: '12.5px', color: isActive ? '#015294' : '#64748b', fontWeight: isActive ? 600 : 400 }}>{step}</span>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-
-                  {/* Right: Console thoughts */}
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', textAlign: 'left', width: '100%' }}>
-                    <div style={{ fontSize: '11px', textTransform: 'uppercase', color: '#015294', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px', letterSpacing: '0.5px' }}>
-                      <RefreshCw size={12} className="spin" style={{ color: '#015294' }} /> Comparison Analysis Log
-                    </div>
-                    <div 
-                      ref={thinkingConsoleRef}
-                      style={{ 
-                        background: '#f8fafc', 
-                        border: '1px solid #cbd5e1', 
-                        padding: '16px', 
-                        borderRadius: '6px', 
-                        height: '320px', 
-                        overflowY: 'auto', 
-                        boxShadow: 'inset 0 2px 8px rgba(0,0,0,0.05)',
-                        display: 'flex',
-                        flexDirection: 'column'
+                    <select
+                      value={fileA || ''}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setFileA(val ? val : null);
+                        if (val === fileB) setFileB(null); // Clear conflict
+                      }}
+                      style={{
+                        width: '100%',
+                        padding: '8px 12px',
+                        borderRadius: '4px',
+                        border: '1px solid #cbd5e1',
+                        background: '#ffffff',
+                        fontSize: '12.5px',
+                        color: '#323639',
+                        fontWeight: 500,
+                        outline: 'none',
+                        cursor: 'pointer'
                       }}
                     >
-                      {renderFormattedThinking(thinkingText)}
-                    </div>
+                      <option value="">-- Choose Original File --</option>
+                      {files.map(f => (
+                        <option key={f.filename} value={f.filename}>{f.displayName}</option>
+                      ))}
+                    </select>
                   </div>
 
+                  {/* Slot: Revised Select dropdown */}
+                  <div 
+                    style={{ 
+                      padding: '12px 16px', 
+                      border: '1px solid',
+                      borderColor: fileB ? '#007E9E' : '#cbd5e1',
+                      background: fileB ? 'rgba(0, 126, 158, 0.04)' : '#f8fafc',
+                      borderRadius: '6px',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '8px'
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <div style={{ width: '24px', height: '24px', borderRadius: '4px', background: fileB ? '#007E9E' : '#cbd5e1', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                        <FileText size={12} color="#fff" />
+                      </div>
+                      <span style={{ fontSize: '11px', textTransform: 'uppercase', color: '#64748b', fontWeight: 700 }}>Revised Document</span>
+                    </div>
+                    <select
+                      value={fileB || ''}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setFileB(val ? val : null);
+                        if (val === fileA) setFileA(null); // Clear conflict
+                      }}
+                      style={{
+                        width: '100%',
+                        padding: '8px 12px',
+                        borderRadius: '4px',
+                        border: '1px solid #cbd5e1',
+                        background: '#ffffff',
+                        fontSize: '12.5px',
+                        color: '#323639',
+                        fontWeight: 500,
+                        outline: 'none',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      <option value="">-- Choose Revised File --</option>
+                      {files.map(f => (
+                        <option key={f.filename} value={f.filename}>{f.displayName}</option>
+                      ))}
+                    </select>
+                  </div>
                 </div>
-              </div>
-            )}
 
-            {/* 2. Welcome State */}
-            {!report && !isLoading && (
+                {/* Main Action Button */}
+                <button 
+                  onClick={handleCompare}
+                  disabled={!fileA || !fileB || isLoading}
+                  className="btn-primary"
+                  style={{ width: '100%', justifyContent: 'center', padding: '10px 0', fontSize: '13px', borderRadius: '4px' }}
+                >
+                  {isLoading ? (
+                    <>
+                      <RefreshCw size={14} className="spin" style={{ color: '#fff' }} />
+                      <span>Auditing Comparison...</span>
+                    </>
+                  ) : (
+                    <>
+                      <span>Compare Documents</span>
+                      <ArrowRight size={14} />
+                    </>
+                  )}
+                </button>
+              </div>
+
+              {/* Core Content Area */}
+              <div style={{ position: 'relative', minHeight: '400px' }}>
+                
+                {/* 1. Loading Panel */}
+                {isLoading && (
+                  <div style={{ position: 'absolute', inset: 0, background: 'rgba(255, 255, 255, 0.96)', backdropFilter: 'blur(8px)', zIndex: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px', borderRadius: 'var(--border-radius)' }}>
+                    <div style={{ maxWidth: '860px', width: '100%', display: 'grid', gridTemplateColumns: '1fr 1.2fr', gap: '32px', alignItems: 'start' }}>
+                      
+                      {/* Left: Progress stepper */}
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                          <div style={{ position: 'relative', width: '48px', height: '48px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                            <div style={{ position: 'absolute', inset: 0, border: '3px solid rgba(1, 82, 148, 0.1)', borderRadius: '50%' }}></div>
+                            <div style={{ position: 'absolute', inset: 0, border: '3px solid transparent', borderTopColor: '#015294', borderRightColor: '#007E9E', borderRadius: '50%', animation: 'spin 1.2s cubic-bezier(0.5, 0, 0.5, 1) infinite' }}></div>
+                            <FileCheck size={16} style={{ color: '#015294' }} />
+                          </div>
+                          <div style={{ textAlign: 'left' }}>
+                            <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#203865', margin: 0 }}>
+                              Comparing Documents
+                            </h3>
+                            <p style={{ fontSize: '11px', color: '#64748b', margin: '2px 0 0' }}>Analyzing clauses & structures...</p>
+                          </div>
+                        </div>
+
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', textAlign: 'left', background: '#f8fafc', border: '1px solid #cbd5e1', padding: '20px', borderRadius: '6px', boxShadow: 'inset 0 1px 3px rgba(0,0,0,0.02)' }}>
+                          {[
+                            "Initializing Original Document...",
+                            "Initializing Revised Document...",
+                            "Analyzing document layout...",
+                            "Comparing text and clauses...",
+                            "Generating comparison report..."
+                          ].map((step, idx) => {
+                            const isDone = loadingStep > idx;
+                            const isActive = loadingStep === idx;
+                            
+                            return (
+                              <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '12px', opacity: isDone || isActive ? 1 : 0.4, transition: 'opacity 0.3s' }}>
+                                {isDone ? (
+                                  <div style={{ width: '18px', height: '18px', borderRadius: '50%', background: '#21874c', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: '10px', fontWeight: 'bold', flexShrink: 0 }}>✓</div>
+                                ) : isActive ? (
+                                  <RefreshCw size={14} className="spin" style={{ color: '#015294', display: 'inline-block', flexShrink: 0 }} />
+                                ) : (
+                                  <RefreshCw size={14} style={{ color: '#cbd5e1', display: 'inline-block', flexShrink: 0 }} />
+                                )}
+                                <span style={{ fontSize: '12.5px', color: isActive ? '#015294' : '#64748b', fontWeight: isActive ? 600 : 400 }}>{step}</span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      {/* Right: Console thoughts */}
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', textAlign: 'left', width: '100%' }}>
+                        <div style={{ fontSize: '11px', textTransform: 'uppercase', color: '#015294', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px', letterSpacing: '0.5px' }}>
+                          <RefreshCw size={12} className="spin" style={{ color: '#015294' }} /> Comparison Analysis Log
+                        </div>
+                        <div 
+                          ref={thinkingConsoleRef}
+                          style={{ 
+                            background: '#f8fafc', 
+                            border: '1px solid #cbd5e1', 
+                            padding: '16px', 
+                            borderRadius: '6px', 
+                            height: '320px', 
+                            overflowY: 'auto', 
+                            boxShadow: 'inset 0 2px 8px rgba(0,0,0,0.05)',
+                            display: 'flex',
+                            flexDirection: 'column'
+                          }}
+                        >
+                          {renderFormattedThinking(thinkingText)}
+                        </div>
+                      </div>
+
+                    </div>
+                  </div>
+                )}
+
+                {/* 2. Welcome State */}
+                {!report && !isLoading && (
+                  <div className="glass-card" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '40px', gap: '24px', textAlign: 'center' }}>
+                    <div style={{ width: '70px', height: '70px', borderRadius: '18px', background: 'rgba(1, 82, 148, 0.05)', border: '1px solid rgba(1, 82, 148, 0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '4px' }} className="pulsing-glow">
+                      <FileCheck size={36} style={{ color: '#015294' }} />
+                    </div>
+                    
+                    <div style={{ maxWidth: '600px' }}>
+                      <h2 style={{ fontSize: '20px', color: '#203865', marginBottom: '12px' }}>Automated Comparison Workspace</h2>
+                      
+                      {/* Premium Highlight Card for Instructions */}
+                      <div style={{ background: '#f8fafc', border: '1px solid #cbd5e1', borderRadius: '8px', padding: '16px 20px', textAlign: 'left', display: 'flex', gap: '14px', alignItems: 'flex-start', boxShadow: 'inset 0 1px 3px rgba(0,0,0,0.02)' }}>
+                        <div style={{ background: '#015294', color: '#fff', width: '24px', height: '24px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: 'bold', flexShrink: 0, marginTop: '2px' }}>i</div>
+                        <p style={{ fontSize: '13px', color: '#475569', lineHeight: 1.5, margin: 0 }}>
+                          Select the <strong style={{ color: '#015294' }}>Original Document</strong> and <strong style={{ color: '#007E9E' }}>Revised Document</strong> from the dropdowns above (or upload new files in the <strong style={{ color: '#334155' }}>Document Storage</strong> drawer on the left), then click <strong style={{ color: '#015294' }}>Compare Documents</strong> to run the comparison.
+                        </p>
+                      </div>
+                    </div>
+                    
+                    {/* Feature details grid */}
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px', width: '100%', maxWidth: '780px', marginTop: '8px' }}>
+                      <div className="glass-card" style={{ padding: '16px', textAlign: 'left', background: '#f8fafc' }}>
+                        <FileText size={20} style={{ color: '#015294', marginBottom: '8px' }} />
+                        <h4 style={{ fontSize: '13px', color: '#203865', marginBottom: '4px' }}>Text Comparison</h4>
+                        <p style={{ fontSize: '11px', color: '#64748b' }}>Audits edits, deletions, additions and dates.</p>
+                      </div>
+                      <div className="glass-card" style={{ padding: '16px', textAlign: 'left', background: '#f8fafc' }}>
+                        <Table size={20} style={{ color: '#007E9E', marginBottom: '8px' }} />
+                        <h4 style={{ fontSize: '13px', color: '#203865', marginBottom: '4px' }}>Table Auditing</h4>
+                        <p style={{ fontSize: '11px', color: '#64748b' }}>Tracks column shifts and cell modifications.</p>
+                      </div>
+                      <div className="glass-card" style={{ padding: '16px', textAlign: 'left', background: '#f8fafc' }}>
+                        <Layers size={20} style={{ color: '#21874c', marginBottom: '8px' }} />
+                        <h4 style={{ fontSize: '13px', color: '#203865', marginBottom: '4px' }}>Visual Changes</h4>
+                        <p style={{ fontSize: '11px', color: '#64748b' }}>Checks layout blocks, logo edits, and diagrams.</p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* 3. Report Details State */}
+                {report && !isLoading && (
+                  <div className="glass-card" style={{ padding: '20px', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+                    
+                    {/* Tab selections */}
+                    <div style={{ display: 'flex', borderBottom: '1px solid #e2e8f0', paddingBottom: '10px', gap: '8px', marginBottom: '16px', alignItems: 'center' }}>
+                      <button 
+                        onClick={() => setActiveTab('summary')}
+                        className={activeTab === 'summary' ? 'btn-primary' : 'btn-secondary'}
+                        style={{ padding: '6px 12px', fontSize: '12px', borderRadius: '4px' }}
+                      >
+                        <LayoutGrid size={14} /> Summary
+                      </button>
+                      <button 
+                        onClick={() => setActiveTab('text')}
+                        className={activeTab === 'text' ? 'btn-primary' : 'btn-secondary'}
+                        style={{ padding: '6px 12px', fontSize: '12px', borderRadius: '4px' }}
+                      >
+                        <FileText size={14} /> Text Changes ({report.textChanges.length})
+                      </button>
+                      <button 
+                        onClick={() => setActiveTab('tables')}
+                        className={activeTab === 'tables' ? 'btn-primary' : 'btn-secondary'}
+                        style={{ padding: '6px 12px', fontSize: '12px', borderRadius: '4px' }}
+                      >
+                        <Table size={14} /> Tables ({report.tableChanges.length})
+                      </button>
+                      <button 
+                        onClick={() => setActiveTab('visuals')}
+                        className={activeTab === 'visuals' ? 'btn-primary' : 'btn-secondary'}
+                        style={{ padding: '6px 12px', fontSize: '12px', borderRadius: '4px' }}
+                      >
+                        <Layers size={14} /> Visuals ({report.visualChanges.length})
+                      </button>
+
+                      <button 
+                        onClick={() => setIsChatOpen(true)}
+                        className="btn-secondary"
+                        style={{ marginLeft: 'auto', padding: '6px 12px', fontSize: '12px', borderRadius: '4px', borderColor: '#cbd5e1', color: '#007E9E' }}
+                      >
+                        <MessageSquare size={14} /> Ask Assistant
+                      </button>
+                    </div>
+
+                    {/* Tab Contents */}
+                    <div style={{ overflowY: 'auto', paddingRight: '4px' }}>
+                      
+                      {/* Summary Tab */}
+                      {activeTab === 'summary' && (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 220px', gap: '20px' }}>
+                            <div className="glass-card" style={{ padding: '16px', borderLeft: '4px solid #015294' }}>
+                              <h3 style={{ fontSize: '14px', marginBottom: '8px', color: '#203865' }}>Executive Summary</h3>
+                              <p style={{ fontSize: '13px', lineHeight: 1.5, color: '#334155' }}>
+                                {report.overallSummary}
+                              </p>
+                            </div>
+
+                            <div className="glass-card" style={{ padding: '16px', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', gap: '8px', background: '#f8fafc' }}>
+                              <h4 style={{ fontSize: '11px', textTransform: 'uppercase', color: '#64748b', fontWeight: 600 }}>Risk Rating</h4>
+                              <div 
+                                style={{ 
+                                  fontSize: '18px', 
+                                  fontWeight: 800, 
+                                  textTransform: 'uppercase', 
+                                  color: getSeverityColor(report.riskRating),
+                                  border: `2px solid ${getSeverityColor(report.riskRating)}`,
+                                  padding: '4px 16px',
+                                  borderRadius: '20px',
+                                  background: '#ffffff'
+                                }}
+                              >
+                                {report.riskRating}
+                              </div>
+                              <span style={{ fontSize: '10px', color: '#64748b' }}>Based on clause shifts</span>
+                            </div>
+                          </div>
+
+                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px' }}>
+                            <div className="glass-card" style={{ padding: '12px', textAlign: 'center', background: '#f8fafc' }}>
+                              <h4 style={{ fontSize: '24px', color: '#015294', fontWeight: 700 }}>{report.textChanges.length}</h4>
+                              <p style={{ fontSize: '11px', color: '#64748b' }}>Text Modifications</p>
+                            </div>
+                            <div className="glass-card" style={{ padding: '12px', textAlign: 'center', background: '#f8fafc' }}>
+                              <h4 style={{ fontSize: '24px', color: '#007E9E', fontWeight: 700 }}>{report.tableChanges.length}</h4>
+                              <p style={{ fontSize: '11px', color: '#64748b' }}>Table Modifications</p>
+                            </div>
+                            <div className="glass-card" style={{ padding: '12px', textAlign: 'center', background: '#f8fafc' }}>
+                              <h4 style={{ fontSize: '24px', color: '#21874c', fontWeight: 700 }}>{report.visualChanges.length}</h4>
+                              <p style={{ fontSize: '11px', color: '#64748b' }}>Visual & Logo Changes</p>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Text Changes Tab */}
+                      {activeTab === 'text' && (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                          {report.textChanges.length === 0 ? (
+                            <div style={{ padding: '30px', textAlign: 'center', color: '#94a3b8' }}>No text modifications found.</div>
+                          ) : (
+                            report.textChanges.map((change, index) => (
+                              <div key={index} className="glass-card" style={{ padding: '16px', borderLeft: `4px solid ${getSeverityColor(change.severity)}` }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                                  <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                                    <span style={{ fontSize: '11px', padding: '2px 6px', borderRadius: '4px', background: '#e2e8f0', fontWeight: 700, color: '#334155' }}>Page {change.page}</span>
+                                    <span style={{ fontSize: '10px', textTransform: 'uppercase', fontWeight: 700, color: change.type === 'added' ? '#21874c' : change.type === 'deleted' ? '#ef4444' : '#007E9E' }}>
+                                      {change.type}
+                                    </span>
+                                  </div>
+                                  <span style={{ fontSize: '10px', textTransform: 'uppercase', color: getSeverityColor(change.severity), fontWeight: 700 }}>{change.severity} risk</span>
+                                </div>
+                                
+                                {/* Highlighted one-sentence description */}
+                                <div style={{ 
+                                  padding: '8px 12px', 
+                                  background: '#f8fafc', 
+                                  borderLeft: `3px solid ${getSeverityColor(change.severity)}`, 
+                                  borderRadius: '0 4px 4px 0', 
+                                  marginBottom: '14px',
+                                  boxShadow: 'inset 0 1px 2px rgba(0,0,0,0.01)'
+                                }}>
+                                  <p style={{ fontSize: '13px', fontWeight: 600, color: '#1e293b', margin: 0, lineHeight: 1.4 }}>
+                                    {change.description}
+                                  </p>
+                                </div>
+                                
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', fontSize: '11.5px' }}>
+                                  {/* Before (Original) */}
+                                  <div style={{ padding: '12px', background: change.type === 'added' ? 'transparent' : '#fef2f2', border: change.type === 'added' ? '1px dashed #cbd5e1' : '1px solid #fee2e2', borderRadius: '6px', display: 'flex', flexDirection: 'column' }}>
+                                    <div style={{ fontSize: '9px', textTransform: 'uppercase', color: change.type === 'added' ? '#64748b' : '#ef4444', fontWeight: 700, marginBottom: '6px' }}>Before (Original)</div>
+                                    {change.type === 'added' ? (
+                                      <div style={{ color: '#94a3b8', fontStyle: 'italic', margin: 'auto 0', fontFamily: "'Plus Jakarta Sans', system-ui, -apple-system, sans-serif", fontSize: '12px' }}>[No text existed in original document]</div>
+                                    ) : (
+                                      renderOriginalDiffText(change.originalText || '', change.revisedText || '')
+                                    )}
+                                  </div>
+                                  
+                                  {/* After (Revised) */}
+                                  <div style={{ padding: '12px', background: change.type === 'deleted' ? 'transparent' : '#f0fdf4', border: change.type === 'deleted' ? '1px dashed #cbd5e1' : '1px solid #dcfce7', borderRadius: '6px', display: 'flex', flexDirection: 'column' }}>
+                                    <div style={{ fontSize: '9px', textTransform: 'uppercase', color: change.type === 'deleted' ? '#64748b' : '#21874c', fontWeight: 700, marginBottom: '6px' }}>After (Revised)</div>
+                                    {change.type === 'deleted' ? (
+                                      <div style={{ color: '#94a3b8', fontStyle: 'italic', margin: 'auto 0', fontFamily: "'Plus Jakarta Sans', system-ui, -apple-system, sans-serif", fontSize: '12px' }}>[Clause deleted in revised document]</div>
+                                    ) : (
+                                      renderRevisedDiffText(change.originalText || '', change.revisedText || '')
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                            ))
+                          )}
+                        </div>
+                      )}
+
+                      {/* Table Changes Tab */}
+                      {activeTab === 'tables' && (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                          {report.tableChanges.length === 0 ? (
+                            <div style={{ padding: '30px', textAlign: 'center', color: '#94a3b8' }}>No table layout or value changes found.</div>
+                          ) : (
+                            report.tableChanges.map((change, index) => (
+                              <div key={index} className="glass-card" style={{ padding: '16px', borderLeft: `4px solid ${getSeverityColor(change.severity)}` }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                                  <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                                    <span style={{ fontSize: '11px', padding: '2px 6px', borderRadius: '4px', background: '#e2e8f0', fontWeight: 700, color: '#334155' }}>Page {change.page}</span>
+                                    <span style={{ fontSize: '12px', fontWeight: 700, color: '#203865' }}>{change.tableName}</span>
+                                    <span style={{ fontSize: '10px', textTransform: 'uppercase', fontWeight: 700, color: '#64748b' }}>
+                                      ({change.type.replace('_', ' ')})
+                                    </span>
+                                  </div>
+                                  <span style={{ fontSize: '10px', textTransform: 'uppercase', color: getSeverityColor(change.severity), fontWeight: 700 }}>{change.severity} risk</span>
+                                </div>
+                                
+                                {/* Highlighted one-sentence description */}
+                                <div style={{ 
+                                  padding: '8px 12px', 
+                                  background: '#f8fafc', 
+                                  borderLeft: `3px solid ${getSeverityColor(change.severity)}`, 
+                                  borderRadius: '0 4px 4px 0', 
+                                  marginBottom: '14px',
+                                  boxShadow: 'inset 0 1px 2px rgba(0,0,0,0.01)'
+                                }}>
+                                  <p style={{ fontSize: '13px', fontWeight: 600, color: '#1e293b', margin: 0, lineHeight: 1.4 }}>
+                                    {change.description}
+                                  </p>
+                                </div>
+                                
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', fontSize: '11.5px' }}>
+                                  {/* Before (Original) */}
+                                  <div style={{ padding: '12px', background: !change.originalText ? 'transparent' : '#fef2f2', border: !change.originalText ? '1px dashed #cbd5e1' : '1px solid #fee2e2', borderRadius: '6px', display: 'flex', flexDirection: 'column' }}>
+                                    <div style={{ fontSize: '9px', textTransform: 'uppercase', color: !change.originalText ? '#64748b' : '#ef4444', fontWeight: 700, marginBottom: '6px' }}>Before (Original Table)</div>
+                                    {!change.originalText ? (
+                                      <div style={{ color: '#94a3b8', fontStyle: 'italic', margin: 'auto 0', fontFamily: "'Plus Jakarta Sans', system-ui, -apple-system, sans-serif", fontSize: '12px' }}>[No entry existed in original table]</div>
+                                    ) : (
+                                      renderOriginalDiffText(change.originalText || '', change.revisedText || '')
+                                    )}
+                                  </div>
+                                  
+                                  {/* After (Revised) */}
+                                  <div style={{ padding: '12px', background: !change.revisedText ? 'transparent' : '#f0fdf4', border: !change.revisedText ? '1px dashed #cbd5e1' : '1px solid #dcfce7', borderRadius: '6px', display: 'flex', flexDirection: 'column' }}>
+                                    <div style={{ fontSize: '9px', textTransform: 'uppercase', color: !change.revisedText ? '#64748b' : '#21874c', fontWeight: 700, marginBottom: '6px' }}>After (Revised Table)</div>
+                                    {!change.revisedText ? (
+                                      <div style={{ color: '#94a3b8', fontStyle: 'italic', margin: 'auto 0', fontFamily: "'Plus Jakarta Sans', system-ui, -apple-system, sans-serif", fontSize: '12px' }}>[Row/cell deleted in revised table]</div>
+                                    ) : (
+                                      renderRevisedDiffText(change.originalText || '', change.revisedText || '')
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                            ))
+                          )}
+                        </div>
+                      )}
+
+                      {/* Visual Changes Tab */}
+                      {activeTab === 'visuals' && (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                          {report.visualChanges.length === 0 ? (
+                            <div style={{ padding: '30px', textAlign: 'center', color: '#94a3b8' }}>No visual layout or image shifts found.</div>
+                          ) : (
+                            report.visualChanges.map((change, index) => (
+                              <div key={index} className="glass-card" style={{ padding: '16px', borderLeft: `4px solid ${getSeverityColor(change.severity)}` }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                                  <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                                    <span style={{ fontSize: '11px', padding: '2px 6px', borderRadius: '4px', background: '#e2e8f0', fontWeight: 700, color: '#334155' }}>Page {change.page}</span>
+                                    <span style={{ fontSize: '11px', fontWeight: 700, color: '#21874c', textTransform: 'uppercase' }}>{change.type.replace('_', ' ')}</span>
+                                  </div>
+                                  <span style={{ fontSize: '10px', textTransform: 'uppercase', color: getSeverityColor(change.severity), fontWeight: 700 }}>{change.severity} risk</span>
+                                </div>
+                                
+                                {/* Highlighted one-sentence description */}
+                                <div style={{ 
+                                  padding: '8px 12px', 
+                                  background: '#f8fafc', 
+                                  borderLeft: `3px solid ${getSeverityColor(change.severity)}`, 
+                                  borderRadius: '0 4px 4px 0', 
+                                  marginBottom: '14px',
+                                  boxShadow: 'inset 0 1px 2px rgba(0,0,0,0.01)'
+                                }}>
+                                  <p style={{ fontSize: '13px', fontWeight: 600, color: '#1e293b', margin: 0, lineHeight: 1.4 }}>
+                                    {change.description}
+                                  </p>
+                                </div>
+                                
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', fontSize: '11.5px' }}>
+                                  {/* Before (Original) */}
+                                  <div style={{ padding: '12px', background: !change.originalText ? 'transparent' : '#fef2f2', border: !change.originalText ? '1px dashed #cbd5e1' : '1px solid #fee2e2', borderRadius: '6px', display: 'flex', flexDirection: 'column' }}>
+                                    <div style={{ fontSize: '9px', textTransform: 'uppercase', color: !change.originalText ? '#64748b' : '#ef4444', fontWeight: 700, marginBottom: '6px' }}>Before (Original Visual Layout)</div>
+                                    {!change.originalText ? (
+                                      <div style={{ color: '#94a3b8', fontStyle: 'italic', margin: 'auto 0', fontFamily: "'Plus Jakarta Sans', system-ui, -apple-system, sans-serif", fontSize: '12px' }}>[No visual element in original layout]</div>
+                                    ) : (
+                                      renderOriginalDiffText(change.originalText || '', change.revisedText || '')
+                                    )}
+                                  </div>
+                                  
+                                  {/* After (Revised) */}
+                                  <div style={{ padding: '12px', background: !change.revisedText ? 'transparent' : '#f0fdf4', border: !change.revisedText ? '1px dashed #cbd5e1' : '1px solid #dcfce7', borderRadius: '6px', display: 'flex', flexDirection: 'column' }}>
+                                    <div style={{ fontSize: '9px', textTransform: 'uppercase', color: !change.revisedText ? '#64748b' : '#21874c', fontWeight: 700, marginBottom: '6px' }}>After (Revised Visual Layout)</div>
+                                    {!change.revisedText ? (
+                                      <div style={{ color: '#94a3b8', fontStyle: 'italic', margin: 'auto 0', fontFamily: "'Plus Jakarta Sans', system-ui, -apple-system, sans-serif", fontSize: '12px' }}>[Visual element deleted in revised layout]</div>
+                                    ) : (
+                                      renderRevisedDiffText(change.originalText || '', change.revisedText || '')
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                            ))
+                          )}
+                        </div>
+                      )}
+
+                    </div>
+                  </div>
+                )}
+
+              </div>
+            </>
+          ) : (
+            // Audit Report Publisher Page
+            report ? (
+              <div style={{ display: 'grid', gridTemplateColumns: '320px 1fr', gap: '24px', height: '100%', alignItems: 'start' }} className="no-print-grid">
+                
+                {/* Left Column: Report Customizer (Settings) */}
+                <div className="glass-card report-settings-panel no-print" style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px', background: '#ffffff', borderRadius: '8px', border: '1px solid #cbd5e1' }}>
+                  <h3 style={{ fontSize: '15px', color: '#203865', borderBottom: '1px solid #e2e8f0', paddingBottom: '8px', fontWeight: 700 }}>Report Customizer</h3>
+                  
+                  {/* Title input */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    <label style={{ fontSize: '11px', fontWeight: 600, color: '#475569' }}>Report Title</label>
+                    <input 
+                      type="text" 
+                      value={publisherTitle}
+                      onChange={(e) => setPublisherTitle(e.target.value)}
+                      style={{ padding: '8px 10px', fontSize: '12.5px', border: '1px solid #cbd5e1', borderRadius: '4px', outline: 'none' }}
+                    />
+                  </div>
+
+                  {/* Auditor Name input */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    <label style={{ fontSize: '11px', fontWeight: 600, color: '#475569' }}>Auditor Name</label>
+                    <input 
+                      type="text" 
+                      value={auditorName}
+                      onChange={(e) => setAuditorName(e.target.value)}
+                      style={{ padding: '8px 10px', fontSize: '12.5px', border: '1px solid #cbd5e1', borderRadius: '4px', outline: 'none' }}
+                    />
+                  </div>
+
+                  {/* Department input */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    <label style={{ fontSize: '11px', fontWeight: 600, color: '#475569' }}>Department</label>
+                    <input 
+                      type="text" 
+                      value={auditorDept}
+                      onChange={(e) => setAuditorDept(e.target.value)}
+                      style={{ padding: '8px 10px', fontSize: '12.5px', border: '1px solid #cbd5e1', borderRadius: '4px', outline: 'none' }}
+                    />
+                  </div>
+
+                  {/* Date input */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    <label style={{ fontSize: '11px', fontWeight: 600, color: '#475569' }}>Audit Date</label>
+                    <input 
+                      type="date" 
+                      value={auditDate}
+                      onChange={(e) => setAuditDate(e.target.value)}
+                      style={{ padding: '8px 10px', fontSize: '12.5px', border: '1px solid #cbd5e1', borderRadius: '4px', outline: 'none' }}
+                    />
+                  </div>
+
+                  {/* Auditor Notes input */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    <label style={{ fontSize: '11px', fontWeight: 600, color: '#475569' }}>Auditor Notes & Sign-off Summary</label>
+                    <textarea 
+                      value={auditNotes}
+                      onChange={(e) => setAuditNotes(e.target.value)}
+                      rows={4}
+                      style={{ padding: '8px 10px', fontSize: '12px', border: '1px solid #cbd5e1', borderRadius: '4px', outline: 'none', resize: 'vertical', fontFamily: 'inherit' }}
+                    />
+                  </div>
+
+                  {/* Section toggles */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', borderTop: '1px solid #e2e8f0', paddingTop: '12px' }}>
+                    <span style={{ fontSize: '11px', fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Include Sections</span>
+                    
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12.5px', cursor: 'pointer' }}>
+                      <input 
+                        type="checkbox" 
+                        checked={includeTextChanges}
+                        onChange={(e) => setIncludeTextChanges(e.target.checked)}
+                        style={{ cursor: 'pointer' }}
+                      />
+                      <span>Text Modifications ({report.textChanges.length})</span>
+                    </label>
+
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12.5px', cursor: 'pointer' }}>
+                      <input 
+                        type="checkbox" 
+                        checked={includeTableChanges}
+                        onChange={(e) => setIncludeTableChanges(e.target.checked)}
+                        style={{ cursor: 'pointer' }}
+                      />
+                      <span>Table Modifications ({report.tableChanges.length})</span>
+                    </label>
+
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12.5px', cursor: 'pointer' }}>
+                      <input 
+                        type="checkbox" 
+                        checked={includeVisualChanges}
+                        onChange={(e) => setIncludeVisualChanges(e.target.checked)}
+                        style={{ cursor: 'pointer' }}
+                      />
+                      <span>Visual Modifications ({report.visualChanges.length})</span>
+                    </label>
+                  </div>
+
+                  {/* Action Buttons */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', borderTop: '1px solid #e2e8f0', paddingTop: '12px' }}>
+                    <button 
+                      onClick={() => window.print()} 
+                      className="btn-primary" 
+                      style={{ width: '100%', justifyContent: 'center', padding: '10px 0', fontSize: '13px' }}
+                    >
+                      <Download size={14} /> Export to PDF
+                    </button>
+                    
+                    <button 
+                      onClick={copyHTMLReport} 
+                      className="btn-secondary" 
+                      style={{ width: '100%', justifyContent: 'center', padding: '10px 0', fontSize: '13px', borderColor: '#007E9E', color: '#007E9E' }}
+                    >
+                      {isCopied ? "✓ Copied to Clipboard!" : "📋 Copy HTML Report"}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Right Column: Paper Document Preview */}
+                <div className="report-preview-container">
+                  <div className="report-paper-page" id="printable-report">
+                    
+                    {/* Header */}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '2px solid #002A5D', paddingBottom: '16px' }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                        <h1 style={{ fontSize: '22px', color: '#002A5D', fontWeight: 800, margin: 0 }}>{publisherTitle}</h1>
+                        <p style={{ fontSize: '12px', color: '#475569', margin: 0 }}>Formal comparison audit report of corporate documentation.</p>
+                      </div>
+                      
+                      {/* PCG Columns Logo */}
+                      <div style={{ flexShrink: 0 }}>
+                        <svg width="150" height="40" viewBox="0 0 180 35" fill="none" xmlns="http://www.w3.org/2000/svg">
+                          <g transform="translate(0, 2)">
+                            <rect x="2" y="26" width="26" height="3" rx="0.5" fill="#002A5D" />
+                            <rect x="4" y="24" width="22" height="2" rx="0.5" fill="#002A5D" />
+                            <path d="M15 2L3 8H27L15 2Z" fill="#002A5D" />
+                            <rect x="5" y="8" width="20" height="2" fill="#002A5D" />
+                            <rect x="7" y="10" width="3" height="14" fill="#002A5D" />
+                            <rect x="13" y="10" width="4" height="14" fill="#002A5D" />
+                            <rect x="20" y="10" width="3" height="14" fill="#002A5D" />
+                          </g>
+                          <text x="38" y="18" fill="#002A5D" fontFamily="'Raleway', sans-serif" fontSize="11" fontWeight="700" letterSpacing="1">PUBLIC</text>
+                          <text x="38" y="28" fill="#64748b" fontFamily="'Raleway', sans-serif" fontSize="8" fontWeight="500" letterSpacing="1.5">CONSULTING GROUP</text>
+                        </svg>
+                      </div>
+                    </div>
+
+                    {/* Metadata Grid */}
+                    <div style={{ background: '#f8fafc', border: '1px solid #cbd5e1', borderRadius: '4px', padding: '16px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px 24px', fontSize: '12px' }}>
+                      <div>
+                        <span style={{ fontWeight: 600, color: '#475569', display: 'block', textTransform: 'uppercase', fontSize: '9.5px', letterSpacing: '0.5px' }}>Original Document</span>
+                        <span style={{ color: '#0f172a', fontWeight: 500, wordBreak: 'break-all' }}>{files.find(f => f.filename === fileA)?.displayName || fileA}</span>
+                      </div>
+                      <div>
+                        <span style={{ fontWeight: 600, color: '#475569', display: 'block', textTransform: 'uppercase', fontSize: '9.5px', letterSpacing: '0.5px' }}>Revised Document</span>
+                        <span style={{ color: '#0f172a', fontWeight: 500, wordBreak: 'break-all' }}>{files.find(f => f.filename === fileB)?.displayName || fileB}</span>
+                      </div>
+                      <div>
+                        <span style={{ fontWeight: 600, color: '#475569', display: 'block', textTransform: 'uppercase', fontSize: '9.5px', letterSpacing: '0.5px' }}>Lead Auditor</span>
+                        <span style={{ color: '#0f172a', fontWeight: 500 }}>{auditorName}</span>
+                      </div>
+                      <div>
+                        <span style={{ fontWeight: 600, color: '#475569', display: 'block', textTransform: 'uppercase', fontSize: '9.5px', letterSpacing: '0.5px' }}>Department</span>
+                        <span style={{ color: '#0f172a', fontWeight: 500 }}>{auditorDept}</span>
+                      </div>
+                      <div>
+                        <span style={{ fontWeight: 600, color: '#475569', display: 'block', textTransform: 'uppercase', fontSize: '9.5px', letterSpacing: '0.5px' }}>Audit Date</span>
+                        <span style={{ color: '#0f172a', fontWeight: 500 }}>{auditDate}</span>
+                      </div>
+                      <div>
+                        <span style={{ fontWeight: 600, color: '#475569', display: 'block', textTransform: 'uppercase', fontSize: '9.5px', letterSpacing: '0.5px' }}>Risk Rating</span>
+                        <span style={{ 
+                          color: getSeverityColor(report.riskRating), 
+                          fontWeight: 700, 
+                          textTransform: 'uppercase', 
+                          fontSize: '11px',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '4px'
+                        }}>
+                          <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: getSeverityColor(report.riskRating) }}></span>
+                          {report.riskRating} Risk
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Section 1: Executive Summary */}
+                    <div className="print-section" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                      <h3 style={{ fontSize: '14px', color: '#002A5D', fontWeight: 700, borderBottom: '1px solid #e2e8f0', paddingBottom: '4px' }}>1. Executive Summary</h3>
+                      <p style={{ fontSize: '12.5px', color: '#334155', lineHeight: '1.6', margin: 0 }}>
+                        {report.overallSummary}
+                      </p>
+                    </div>
+
+                    {/* Section 2: Text Changes */}
+                    {includeTextChanges && (
+                      <div className="print-section" style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                        <h3 style={{ fontSize: '14px', color: '#002A5D', fontWeight: 700, borderBottom: '1px solid #e2e8f0', paddingBottom: '4px' }}>2. Text Modifications</h3>
+                        {report.textChanges.length === 0 ? (
+                          <p style={{ fontSize: '12px', color: '#64748b', fontStyle: 'italic', margin: 0 }}>No text modifications identified.</p>
+                        ) : (
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                            {report.textChanges.map((change, idx) => (
+                              <div key={idx} style={{ border: '1px solid #e2e8f0', borderRadius: '4px', padding: '12px', display: 'flex', flexDirection: 'column', gap: '8px', pageBreakInside: 'avoid', breakInside: 'avoid' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', fontWeight: 600, color: '#475569' }}>
+                                  <span>Page {change.page} • Change #{idx + 1}</span>
+                                  <span style={{ color: getSeverityColor(change.severity), textTransform: 'uppercase' }}>{change.severity} Severity</span>
+                                </div>
+                                
+                                <p style={{ fontSize: '12px', fontWeight: 600, color: '#0f172a', margin: 0 }}>
+                                  {change.description}
+                                </p>
+
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginTop: '4px' }}>
+                                  {/* Original */}
+                                  <div style={{ background: change.type === 'added' ? 'transparent' : '#fef2f2', border: change.type === 'added' ? '1px dashed #cbd5e1' : '1px solid #fee2e2', padding: '8px', borderRadius: '4px' }}>
+                                    <div style={{ fontSize: '8.5px', fontWeight: 700, color: change.type === 'added' ? '#64748b' : '#ef4444', textTransform: 'uppercase', marginBottom: '4px' }}>Original</div>
+                                    {change.type === 'added' ? (
+                                      <span style={{ fontSize: '11px', color: '#94a3b8', fontStyle: 'italic' }}>[No text existed]</span>
+                                    ) : (
+                                      renderOriginalDiffText(change.originalText || '', change.revisedText || '')
+                                    )}
+                                  </div>
+                                  {/* Revised */}
+                                  <div style={{ background: change.type === 'deleted' ? 'transparent' : '#f0fdf4', border: change.type === 'deleted' ? '1px dashed #cbd5e1' : '1px solid #dcfce7', padding: '8px', borderRadius: '4px' }}>
+                                    <div style={{ fontSize: '8.5px', fontWeight: 700, color: change.type === 'deleted' ? '#64748b' : '#21874c', textTransform: 'uppercase', marginBottom: '4px' }}>Revised</div>
+                                    {change.type === 'deleted' ? (
+                                      <span style={{ fontSize: '11px', color: '#94a3b8', fontStyle: 'italic' }}>[Clause deleted]</span>
+                                    ) : (
+                                      renderRevisedDiffText(change.originalText || '', change.revisedText || '')
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Section 3: Table Changes */}
+                    {includeTableChanges && (
+                      <div className="print-section" style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                        <h3 style={{ fontSize: '14px', color: '#002A5D', fontWeight: 700, borderBottom: '1px solid #e2e8f0', paddingBottom: '4px' }}>3. Table Modifications</h3>
+                        {report.tableChanges.length === 0 ? (
+                          <p style={{ fontSize: '12px', color: '#64748b', fontStyle: 'italic', margin: 0 }}>No table modifications identified.</p>
+                        ) : (
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                            {report.tableChanges.map((change, idx) => (
+                              <div key={idx} style={{ border: '1px solid #e2e8f0', borderRadius: '4px', padding: '12px', display: 'flex', flexDirection: 'column', gap: '8px', pageBreakInside: 'avoid', breakInside: 'avoid' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', fontWeight: 600, color: '#475569' }}>
+                                  <span>Page {change.page} • {change.tableName}</span>
+                                  <span style={{ color: getSeverityColor(change.severity), textTransform: 'uppercase' }}>{change.severity} Severity</span>
+                                </div>
+                                
+                                <p style={{ fontSize: '12px', fontWeight: 600, color: '#0f172a', margin: 0 }}>
+                                  {change.description}
+                                </p>
+
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginTop: '4px' }}>
+                                  {/* Original */}
+                                  <div style={{ background: !change.originalText ? 'transparent' : '#fef2f2', border: !change.originalText ? '1px dashed #cbd5e1' : '1px solid #fee2e2', padding: '8px', borderRadius: '4px' }}>
+                                    <div style={{ fontSize: '8.5px', fontWeight: 700, color: !change.originalText ? '#64748b' : '#ef4444', textTransform: 'uppercase', marginBottom: '4px' }}>Original</div>
+                                    {!change.originalText ? (
+                                      <span style={{ fontSize: '11px', color: '#94a3b8', fontStyle: 'italic' }}>[No row/cell existed]</span>
+                                    ) : (
+                                      renderOriginalDiffText(change.originalText || '', change.revisedText || '')
+                                    )}
+                                  </div>
+                                  {/* Revised */}
+                                  <div style={{ background: !change.revisedText ? 'transparent' : '#f0fdf4', border: !change.revisedText ? '1px dashed #cbd5e1' : '1px solid #dcfce7', padding: '8px', borderRadius: '4px' }}>
+                                    <div style={{ fontSize: '8.5px', fontWeight: 700, color: !change.revisedText ? '#64748b' : '#21874c', textTransform: 'uppercase', marginBottom: '4px' }}>Revised</div>
+                                    {!change.revisedText ? (
+                                      <span style={{ fontSize: '11px', color: '#94a3b8', fontStyle: 'italic' }}>[Row/cell deleted]</span>
+                                    ) : (
+                                      renderRevisedDiffText(change.originalText || '', change.revisedText || '')
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Section 4: Visual Changes */}
+                    {includeVisualChanges && (
+                      <div className="print-section" style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                        <h3 style={{ fontSize: '14px', color: '#002A5D', fontWeight: 700, borderBottom: '1px solid #e2e8f0', paddingBottom: '4px' }}>4. Visual & Layout Modifications</h3>
+                        {report.visualChanges.length === 0 ? (
+                          <p style={{ fontSize: '12px', color: '#64748b', fontStyle: 'italic', margin: 0 }}>No visual modifications identified.</p>
+                        ) : (
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                            {report.visualChanges.map((change, idx) => (
+                              <div key={idx} style={{ border: '1px solid #e2e8f0', borderRadius: '4px', padding: '12px', display: 'flex', flexDirection: 'column', gap: '8px', pageBreakInside: 'avoid', breakInside: 'avoid' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', fontWeight: 600, color: '#475569' }}>
+                                  <span>Page {change.page} • {change.type.replace('_', ' ').toUpperCase()}</span>
+                                  <span style={{ color: getSeverityColor(change.severity), textTransform: 'uppercase' }}>{change.severity} Severity</span>
+                                </div>
+                                
+                                <p style={{ fontSize: '12px', fontWeight: 600, color: '#0f172a', margin: 0 }}>
+                                  {change.description}
+                                </p>
+
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginTop: '4px' }}>
+                                  {/* Original */}
+                                  <div style={{ background: !change.originalText ? 'transparent' : '#fef2f2', border: !change.originalText ? '1px dashed #cbd5e1' : '1px solid #fee2e2', padding: '8px', borderRadius: '4px' }}>
+                                    <div style={{ fontSize: '8.5px', fontWeight: 700, color: !change.originalText ? '#64748b' : '#ef4444', textTransform: 'uppercase', marginBottom: '4px' }}>Original</div>
+                                    {!change.originalText ? (
+                                      <span style={{ fontSize: '11px', color: '#94a3b8', fontStyle: 'italic' }}>[No visual element existed]</span>
+                                    ) : (
+                                      renderOriginalDiffText(change.originalText || '', change.revisedText || '')
+                                    )}
+                                  </div>
+                                  {/* Revised */}
+                                  <div style={{ background: !change.revisedText ? 'transparent' : '#f0fdf4', border: !change.revisedText ? '1px dashed #cbd5e1' : '1px solid #dcfce7', padding: '8px', borderRadius: '4px' }}>
+                                    <div style={{ fontSize: '8.5px', fontWeight: 700, color: !change.revisedText ? '#64748b' : '#21874c', textTransform: 'uppercase', marginBottom: '4px' }}>Revised</div>
+                                    {!change.revisedText ? (
+                                      <span style={{ fontSize: '11px', color: '#94a3b8', fontStyle: 'italic' }}>[Visual element deleted]</span>
+                                    ) : (
+                                      renderRevisedDiffText(change.originalText || '', change.revisedText || '')
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Section 5: Auditor Notes & Sign-off */}
+                    {auditNotes.trim() && (
+                      <div className="print-section" style={{ display: 'flex', flexDirection: 'column', gap: '8px', borderTop: '2px solid #e2e8f0', paddingTop: '16px', marginTop: '12px', pageBreakInside: 'avoid', breakInside: 'avoid' }}>
+                        <h3 style={{ fontSize: '14px', color: '#002A5D', fontWeight: 700 }}>5. Compliance Notes & Audit Sign-Off</h3>
+                        <p style={{ fontSize: '12.5px', color: '#334155', lineHeight: '1.6', margin: 0, fontStyle: 'italic' }}>
+                          {auditNotes}
+                        </p>
+                        
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '40px', marginTop: '30px' }}>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                            <div style={{ borderBottom: '1px solid #cbd5e1', height: '24px' }}></div>
+                            <span style={{ fontSize: '11px', fontWeight: 600, color: '#475569' }}>Auditor Signature</span>
+                            <span style={{ fontSize: '10px', color: '#64748b' }}>{auditorName}</span>
+                          </div>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                            <div style={{ borderBottom: '1px solid #cbd5e1', height: '24px' }}></div>
+                            <span style={{ fontSize: '11px', fontWeight: 600, color: '#475569' }}>Sign-off Date</span>
+                            <span style={{ fontSize: '10px', color: '#64748b' }}>{auditDate}</span>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                  </div>
+                </div>
+
+              </div>
+            ) : (
+              // No comparison report active
               <div className="glass-card" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '40px', gap: '24px', textAlign: 'center' }}>
                 <div style={{ width: '70px', height: '70px', borderRadius: '18px', background: 'rgba(1, 82, 148, 0.05)', border: '1px solid rgba(1, 82, 148, 0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '4px' }} className="pulsing-glow">
                   <FileCheck size={36} style={{ color: '#015294' }} />
                 </div>
                 
                 <div style={{ maxWidth: '600px' }}>
-                  <h2 style={{ fontSize: '20px', color: '#203865', marginBottom: '12px' }}>Automated Comparison Workspace</h2>
+                  <h2 style={{ fontSize: '20px', color: '#203865', marginBottom: '12px' }}>Audit Report Publisher</h2>
                   
-                  {/* Premium Highlight Card for Instructions */}
-                  <div style={{ background: '#f8fafc', border: '1px solid #cbd5e1', borderRadius: '8px', padding: '16px 20px', textAlign: 'left', display: 'flex', gap: '14px', alignItems: 'flex-start', boxShadow: 'inset 0 1px 3px rgba(0,0,0,0.02)' }}>
-                    <div style={{ background: '#015294', color: '#fff', width: '24px', height: '24px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: 'bold', flexShrink: 0, marginTop: '2px' }}>i</div>
-                    <p style={{ fontSize: '13px', color: '#475569', lineHeight: 1.5, margin: 0 }}>
-                      Select the <strong style={{ color: '#015294' }}>Original Document</strong> and <strong style={{ color: '#007E9E' }}>Revised Document</strong> from the dropdowns above (or upload new files in the <strong style={{ color: '#334155' }}>Document Storage</strong> drawer on the left), then click <strong style={{ color: '#015294' }}>Compare Documents</strong> to run the comparison.
+                  <div style={{ background: '#fef3c7', border: '1px solid #fcd34d', borderRadius: '8px', padding: '16px 20px', textAlign: 'left', display: 'flex', gap: '14px', alignItems: 'flex-start', color: '#d97706' }}>
+                    <AlertTriangle size={24} style={{ flexShrink: 0, marginTop: '2px' }} />
+                    <p style={{ fontSize: '13px', lineHeight: 1.5, margin: 0 }}>
+                      <strong>No active audit report found.</strong> Please select an original and a revised document and click <strong>Compare Documents</strong> in the Compare Workspace first, then navigate back here to publish the report.
                     </p>
                   </div>
                 </div>
                 
-                {/* Feature details grid */}
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px', width: '100%', maxWidth: '780px', marginTop: '8px' }}>
-                  <div className="glass-card" style={{ padding: '16px', textAlign: 'left', background: '#f8fafc' }}>
-                    <FileText size={20} style={{ color: '#015294', marginBottom: '8px' }} />
-                    <h4 style={{ fontSize: '13px', color: '#203865', marginBottom: '4px' }}>Text Comparison</h4>
-                    <p style={{ fontSize: '11px', color: '#64748b' }}>Audits edits, deletions, additions and dates.</p>
-                  </div>
-                  <div className="glass-card" style={{ padding: '16px', textAlign: 'left', background: '#f8fafc' }}>
-                    <Table size={20} style={{ color: '#007E9E', marginBottom: '8px' }} />
-                    <h4 style={{ fontSize: '13px', color: '#203865', marginBottom: '4px' }}>Table Auditing</h4>
-                    <p style={{ fontSize: '11px', color: '#64748b' }}>Tracks column shifts and cell modifications.</p>
-                  </div>
-                  <div className="glass-card" style={{ padding: '16px', textAlign: 'left', background: '#f8fafc' }}>
-                    <Layers size={20} style={{ color: '#21874c', marginBottom: '8px' }} />
-                    <h4 style={{ fontSize: '13px', color: '#203865', marginBottom: '4px' }}>Visual Changes</h4>
-                    <p style={{ fontSize: '11px', color: '#64748b' }}>Checks layout blocks, logo edits, and diagrams.</p>
-                  </div>
-                </div>
+                <button 
+                  onClick={() => setActivePage('compare')} 
+                  className="btn-primary" 
+                  style={{ padding: '10px 20px', fontSize: '13px' }}
+                >
+                  Go to Compare Workspace
+                </button>
               </div>
-            )}
-
-            {/* 3. Report Details State */}
-            {report && !isLoading && (
-              <div className="glass-card" style={{ padding: '20px', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-                
-                {/* Tab selections */}
-                <div style={{ display: 'flex', borderBottom: '1px solid #e2e8f0', paddingBottom: '10px', gap: '8px', marginBottom: '16px', alignItems: 'center' }}>
-                  <button 
-                    onClick={() => setActiveTab('summary')}
-                    className={activeTab === 'summary' ? 'btn-primary' : 'btn-secondary'}
-                    style={{ padding: '6px 12px', fontSize: '12px', borderRadius: '4px' }}
-                  >
-                    <LayoutGrid size={14} /> Summary
-                  </button>
-                  <button 
-                    onClick={() => setActiveTab('text')}
-                    className={activeTab === 'text' ? 'btn-primary' : 'btn-secondary'}
-                    style={{ padding: '6px 12px', fontSize: '12px', borderRadius: '4px' }}
-                  >
-                    <FileText size={14} /> Text Changes ({report.textChanges.length})
-                  </button>
-                  <button 
-                    onClick={() => setActiveTab('tables')}
-                    className={activeTab === 'tables' ? 'btn-primary' : 'btn-secondary'}
-                    style={{ padding: '6px 12px', fontSize: '12px', borderRadius: '4px' }}
-                  >
-                    <Table size={14} /> Tables ({report.tableChanges.length})
-                  </button>
-                  <button 
-                    onClick={() => setActiveTab('visuals')}
-                    className={activeTab === 'visuals' ? 'btn-primary' : 'btn-secondary'}
-                    style={{ padding: '6px 12px', fontSize: '12px', borderRadius: '4px' }}
-                  >
-                    <Layers size={14} /> Visuals ({report.visualChanges.length})
-                  </button>
-
-                  <button 
-                    onClick={() => setIsChatOpen(true)}
-                    className="btn-secondary"
-                    style={{ marginLeft: 'auto', padding: '6px 12px', fontSize: '12px', borderRadius: '4px', borderColor: '#cbd5e1', color: '#007E9E' }}
-                  >
-                    <MessageSquare size={14} /> Ask Assistant
-                  </button>
-                </div>
-
-                {/* Tab Contents */}
-                <div style={{ overflowY: 'auto', paddingRight: '4px' }}>
-                  
-                  {/* Summary Tab */}
-                  {activeTab === 'summary' && (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 220px', gap: '20px' }}>
-                        <div className="glass-card" style={{ padding: '16px', borderLeft: '4px solid #015294' }}>
-                          <h3 style={{ fontSize: '14px', marginBottom: '8px', color: '#203865' }}>Executive Summary</h3>
-                          <p style={{ fontSize: '13px', lineHeight: 1.5, color: '#334155' }}>
-                            {report.overallSummary}
-                          </p>
-                        </div>
-
-                        <div className="glass-card" style={{ padding: '16px', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', gap: '8px', background: '#f8fafc' }}>
-                          <h4 style={{ fontSize: '11px', textTransform: 'uppercase', color: '#64748b', fontWeight: 600 }}>Risk Rating</h4>
-                          <div 
-                            style={{ 
-                              fontSize: '18px', 
-                              fontWeight: 800, 
-                              textTransform: 'uppercase', 
-                              color: getSeverityColor(report.riskRating),
-                              border: `2px solid ${getSeverityColor(report.riskRating)}`,
-                              padding: '4px 16px',
-                              borderRadius: '20px',
-                              background: '#ffffff'
-                            }}
-                          >
-                            {report.riskRating}
-                          </div>
-                          <span style={{ fontSize: '10px', color: '#64748b' }}>Based on clause shifts</span>
-                        </div>
-                      </div>
-
-                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px' }}>
-                        <div className="glass-card" style={{ padding: '12px', textAlign: 'center', background: '#f8fafc' }}>
-                          <h4 style={{ fontSize: '24px', color: '#015294', fontWeight: 700 }}>{report.textChanges.length}</h4>
-                          <p style={{ fontSize: '11px', color: '#64748b' }}>Text Modifications</p>
-                        </div>
-                        <div className="glass-card" style={{ padding: '12px', textAlign: 'center', background: '#f8fafc' }}>
-                          <h4 style={{ fontSize: '24px', color: '#007E9E', fontWeight: 700 }}>{report.tableChanges.length}</h4>
-                          <p style={{ fontSize: '11px', color: '#64748b' }}>Table Modifications</p>
-                        </div>
-                        <div className="glass-card" style={{ padding: '12px', textAlign: 'center', background: '#f8fafc' }}>
-                          <h4 style={{ fontSize: '24px', color: '#21874c', fontWeight: 700 }}>{report.visualChanges.length}</h4>
-                          <p style={{ fontSize: '11px', color: '#64748b' }}>Visual & Logo Changes</p>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Text Changes Tab */}
-                  {activeTab === 'text' && (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                      {report.textChanges.length === 0 ? (
-                        <div style={{ padding: '30px', textAlign: 'center', color: '#94a3b8' }}>No text modifications found.</div>
-                      ) : (
-                        report.textChanges.map((change, index) => (
-                          <div key={index} className="glass-card" style={{ padding: '16px', borderLeft: `4px solid ${getSeverityColor(change.severity)}` }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-                              <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                                <span style={{ fontSize: '11px', padding: '2px 6px', borderRadius: '4px', background: '#e2e8f0', fontWeight: 700, color: '#334155' }}>Page {change.page}</span>
-                                <span style={{ fontSize: '10px', textTransform: 'uppercase', fontWeight: 700, color: change.type === 'added' ? '#21874c' : change.type === 'deleted' ? '#ef4444' : '#007E9E' }}>
-                                  {change.type}
-                                </span>
-                              </div>
-                              <span style={{ fontSize: '10px', textTransform: 'uppercase', color: getSeverityColor(change.severity), fontWeight: 700 }}>{change.severity} risk</span>
-                            </div>
-                            
-                            {/* Highlighted one-sentence description */}
-                            <div style={{ 
-                              padding: '8px 12px', 
-                              background: '#f8fafc', 
-                              borderLeft: `3px solid ${getSeverityColor(change.severity)}`, 
-                              borderRadius: '0 4px 4px 0', 
-                              marginBottom: '14px',
-                              boxShadow: 'inset 0 1px 2px rgba(0,0,0,0.01)'
-                            }}>
-                              <p style={{ fontSize: '13px', fontWeight: 600, color: '#1e293b', margin: 0, lineHeight: 1.4 }}>
-                                {change.description}
-                              </p>
-                            </div>
-                            
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', fontSize: '11.5px' }}>
-                              {/* Before (Original) */}
-                              <div style={{ padding: '12px', background: change.type === 'added' ? 'transparent' : '#fef2f2', border: change.type === 'added' ? '1px dashed #cbd5e1' : '1px solid #fee2e2', borderRadius: '6px', display: 'flex', flexDirection: 'column' }}>
-                                <div style={{ fontSize: '9px', textTransform: 'uppercase', color: change.type === 'added' ? '#64748b' : '#ef4444', fontWeight: 700, marginBottom: '6px' }}>Before (Original)</div>
-                                {change.type === 'added' ? (
-                                  <div style={{ color: '#94a3b8', fontStyle: 'italic', margin: 'auto 0', fontFamily: "'Plus Jakarta Sans', system-ui, -apple-system, sans-serif", fontSize: '12px' }}>[No text existed in original document]</div>
-                                ) : (
-                                  renderOriginalDiffText(change.originalText || '', change.revisedText || '')
-                                )}
-                              </div>
-                              
-                              {/* After (Revised) */}
-                              <div style={{ padding: '12px', background: change.type === 'deleted' ? 'transparent' : '#f0fdf4', border: change.type === 'deleted' ? '1px dashed #cbd5e1' : '1px solid #dcfce7', borderRadius: '6px', display: 'flex', flexDirection: 'column' }}>
-                                <div style={{ fontSize: '9px', textTransform: 'uppercase', color: change.type === 'deleted' ? '#64748b' : '#21874c', fontWeight: 700, marginBottom: '6px' }}>After (Revised)</div>
-                                {change.type === 'deleted' ? (
-                                  <div style={{ color: '#94a3b8', fontStyle: 'italic', margin: 'auto 0', fontFamily: "'Plus Jakarta Sans', system-ui, -apple-system, sans-serif", fontSize: '12px' }}>[Clause deleted in revised document]</div>
-                                ) : (
-                                  renderRevisedDiffText(change.originalText || '', change.revisedText || '')
-                                )}
-                              </div>
-                            </div>
-                          </div>
-                        ))
-                      )}
-                    </div>
-                  )}
-
-                  {/* Table Changes Tab */}
-                  {activeTab === 'tables' && (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                      {report.tableChanges.length === 0 ? (
-                        <div style={{ padding: '30px', textAlign: 'center', color: '#94a3b8' }}>No table layout or value changes found.</div>
-                      ) : (
-                        report.tableChanges.map((change, index) => (
-                          <div key={index} className="glass-card" style={{ padding: '16px', borderLeft: `4px solid ${getSeverityColor(change.severity)}` }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-                              <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                                <span style={{ fontSize: '11px', padding: '2px 6px', borderRadius: '4px', background: '#e2e8f0', fontWeight: 700, color: '#334155' }}>Page {change.page}</span>
-                                <span style={{ fontSize: '12px', fontWeight: 700, color: '#203865' }}>{change.tableName}</span>
-                                <span style={{ fontSize: '10px', textTransform: 'uppercase', fontWeight: 700, color: '#64748b' }}>
-                                  ({change.type.replace('_', ' ')})
-                                </span>
-                              </div>
-                              <span style={{ fontSize: '10px', textTransform: 'uppercase', color: getSeverityColor(change.severity), fontWeight: 700 }}>{change.severity} risk</span>
-                            </div>
-                            
-                            {/* Highlighted one-sentence description */}
-                            <div style={{ 
-                              padding: '8px 12px', 
-                              background: '#f8fafc', 
-                              borderLeft: `3px solid ${getSeverityColor(change.severity)}`, 
-                              borderRadius: '0 4px 4px 0', 
-                              marginBottom: '14px',
-                              boxShadow: 'inset 0 1px 2px rgba(0,0,0,0.01)'
-                            }}>
-                              <p style={{ fontSize: '13px', fontWeight: 600, color: '#1e293b', margin: 0, lineHeight: 1.4 }}>
-                                {change.description}
-                              </p>
-                            </div>
-                            
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', fontSize: '11.5px' }}>
-                              {/* Before (Original) */}
-                              <div style={{ padding: '12px', background: !change.originalText ? 'transparent' : '#fef2f2', border: !change.originalText ? '1px dashed #cbd5e1' : '1px solid #fee2e2', borderRadius: '6px', display: 'flex', flexDirection: 'column' }}>
-                                <div style={{ fontSize: '9px', textTransform: 'uppercase', color: !change.originalText ? '#64748b' : '#ef4444', fontWeight: 700, marginBottom: '6px' }}>Before (Original Table)</div>
-                                {!change.originalText ? (
-                                  <div style={{ color: '#94a3b8', fontStyle: 'italic', margin: 'auto 0', fontFamily: "'Plus Jakarta Sans', system-ui, -apple-system, sans-serif", fontSize: '12px' }}>[No entry existed in original table]</div>
-                                ) : (
-                                  renderOriginalDiffText(change.originalText || '', change.revisedText || '')
-                                )}
-                              </div>
-                              
-                              {/* After (Revised) */}
-                              <div style={{ padding: '12px', background: !change.revisedText ? 'transparent' : '#f0fdf4', border: !change.revisedText ? '1px dashed #cbd5e1' : '1px solid #dcfce7', borderRadius: '6px', display: 'flex', flexDirection: 'column' }}>
-                                <div style={{ fontSize: '9px', textTransform: 'uppercase', color: !change.revisedText ? '#64748b' : '#21874c', fontWeight: 700, marginBottom: '6px' }}>After (Revised Table)</div>
-                                {!change.revisedText ? (
-                                  <div style={{ color: '#94a3b8', fontStyle: 'italic', margin: 'auto 0', fontFamily: "'Plus Jakarta Sans', system-ui, -apple-system, sans-serif", fontSize: '12px' }}>[Row/cell deleted in revised table]</div>
-                                ) : (
-                                  renderRevisedDiffText(change.originalText || '', change.revisedText || '')
-                                )}
-                              </div>
-                            </div>
-                          </div>
-                        ))
-                      )}
-                    </div>
-                  )}
-
-                  {/* Visual Changes Tab */}
-                  {activeTab === 'visuals' && (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                      {report.visualChanges.length === 0 ? (
-                        <div style={{ padding: '30px', textAlign: 'center', color: '#94a3b8' }}>No visual layout or image shifts found.</div>
-                      ) : (
-                        report.visualChanges.map((change, index) => (
-                          <div key={index} className="glass-card" style={{ padding: '16px', borderLeft: `4px solid ${getSeverityColor(change.severity)}` }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-                              <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                                <span style={{ fontSize: '11px', padding: '2px 6px', borderRadius: '4px', background: '#e2e8f0', fontWeight: 700, color: '#334155' }}>Page {change.page}</span>
-                                <span style={{ fontSize: '11px', fontWeight: 700, color: '#21874c', textTransform: 'uppercase' }}>{change.type.replace('_', ' ')}</span>
-                              </div>
-                              <span style={{ fontSize: '10px', textTransform: 'uppercase', color: getSeverityColor(change.severity), fontWeight: 700 }}>{change.severity} risk</span>
-                            </div>
-                            
-                            {/* Highlighted one-sentence description */}
-                            <div style={{ 
-                              padding: '8px 12px', 
-                              background: '#f8fafc', 
-                              borderLeft: `3px solid ${getSeverityColor(change.severity)}`, 
-                              borderRadius: '0 4px 4px 0', 
-                              marginBottom: '14px',
-                              boxShadow: 'inset 0 1px 2px rgba(0,0,0,0.01)'
-                            }}>
-                              <p style={{ fontSize: '13px', fontWeight: 600, color: '#1e293b', margin: 0, lineHeight: 1.4 }}>
-                                {change.description}
-                              </p>
-                            </div>
-                            
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', fontSize: '11.5px' }}>
-                              {/* Before (Original) */}
-                              <div style={{ padding: '12px', background: !change.originalText ? 'transparent' : '#fef2f2', border: !change.originalText ? '1px dashed #cbd5e1' : '1px solid #fee2e2', borderRadius: '6px', display: 'flex', flexDirection: 'column' }}>
-                                <div style={{ fontSize: '9px', textTransform: 'uppercase', color: !change.originalText ? '#64748b' : '#ef4444', fontWeight: 700, marginBottom: '6px' }}>Before (Original Visual Layout)</div>
-                                {!change.originalText ? (
-                                  <div style={{ color: '#94a3b8', fontStyle: 'italic', margin: 'auto 0', fontFamily: "'Plus Jakarta Sans', system-ui, -apple-system, sans-serif", fontSize: '12px' }}>[No visual element in original layout]</div>
-                                ) : (
-                                  renderOriginalDiffText(change.originalText || '', change.revisedText || '')
-                                )}
-                              </div>
-                              
-                              {/* After (Revised) */}
-                              <div style={{ padding: '12px', background: !change.revisedText ? 'transparent' : '#f0fdf4', border: !change.revisedText ? '1px dashed #cbd5e1' : '1px solid #dcfce7', borderRadius: '6px', display: 'flex', flexDirection: 'column' }}>
-                                <div style={{ fontSize: '9px', textTransform: 'uppercase', color: !change.revisedText ? '#64748b' : '#21874c', fontWeight: 700, marginBottom: '6px' }}>After (Revised Visual Layout)</div>
-                                {!change.revisedText ? (
-                                  <div style={{ color: '#94a3b8', fontStyle: 'italic', margin: 'auto 0', fontFamily: "'Plus Jakarta Sans', system-ui, -apple-system, sans-serif", fontSize: '12px' }}>[Visual element deleted in revised layout]</div>
-                                ) : (
-                                  renderRevisedDiffText(change.originalText || '', change.revisedText || '')
-                                )}
-                              </div>
-                            </div>
-                          </div>
-                        ))
-                      )}
-                    </div>
-                  )}
-
-                </div>
-              </div>
-            )}
-
-          </div>
+            )
+          )}
         </div>
       </main>
 
