@@ -457,8 +457,8 @@ h1, h2, h3, h4, h5 {
     display: block !important; /* Force HTML preview to print */
   }
 
-  .markdown-preview-block {
-    display: none !important; /* Never print markdown code */
+  .markdown-preview-block, .database-preview-block {
+    display: none !important; /* Never print markdown or database code */
   }
 
   .print-section {

@@ -392,7 +392,9 @@ export default function App() {
   const [includeVisualChanges, setIncludeVisualChanges] = useState(true);
   const [isCopied, setIsCopied] = useState(false);
   const [isCopiedMd, setIsCopiedMd] = useState(false);
-  const [publisherViewMode, setPublisherViewMode] = useState<'html' | 'markdown'>('html');
+  const [publisherViewMode, setPublisherViewMode] = useState<'html' | 'markdown' | 'database'>('html');
+  const [isCopiedJson, setIsCopiedJson] = useState(false);
+  const [isCopiedSql, setIsCopiedSql] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
@@ -896,6 +898,16 @@ export default function App() {
   const copyHTMLReport = () => {
     if (!report) return;
 
+    let htmlSecText = 0;
+    let htmlSecTable = 0;
+    let htmlSecVisual = 0;
+    let htmlSecSignoff = 0;
+    let currentHtmlNum = 1;
+    if (includeTextChanges) { currentHtmlNum++; htmlSecText = currentHtmlNum; }
+    if (includeTableChanges) { currentHtmlNum++; htmlSecTable = currentHtmlNum; }
+    if (includeVisualChanges) { currentHtmlNum++; htmlSecVisual = currentHtmlNum; }
+    if (auditNotes.trim()) { currentHtmlNum++; htmlSecSignoff = currentHtmlNum; }
+
     const getSeverityColorHex = (sev: 'low' | 'medium' | 'high') => {
       switch (sev) {
         case 'high': return '#dc2626';
@@ -972,7 +984,7 @@ export default function App() {
     if (includeTextChanges) {
       html += `
         <div style="margin-bottom: 25px;">
-          <h2 style="font-size: 16px; color: #002A5D; border-bottom: 1px solid #cbd5e1; padding-bottom: 5px; font-weight: bold;">2. Text Modifications</h2>
+          <h2 style="font-size: 16px; color: #002A5D; border-bottom: 1px solid #cbd5e1; padding-bottom: 5px; font-weight: bold;">${htmlSecText}. Text Modifications</h2>
       `;
       if (report.textChanges.length === 0) {
         html += `<p style="font-size: 13px; color: #64748b; font-style: italic;">No text modifications identified.</p>`;
@@ -1012,7 +1024,7 @@ export default function App() {
     if (includeTableChanges) {
       html += `
         <div style="margin-bottom: 25px;">
-          <h2 style="font-size: 16px; color: #002A5D; border-bottom: 1px solid #cbd5e1; padding-bottom: 5px; font-weight: bold;">3. Table Modifications</h2>
+          <h2 style="font-size: 16px; color: #002A5D; border-bottom: 1px solid #cbd5e1; padding-bottom: 5px; font-weight: bold;">${htmlSecTable}. Table Modifications</h2>
       `;
       if (report.tableChanges.length === 0) {
         html += `<p style="font-size: 13px; color: #64748b; font-style: italic;">No table modifications identified.</p>`;
@@ -1052,7 +1064,7 @@ export default function App() {
     if (includeVisualChanges) {
       html += `
         <div style="margin-bottom: 25px;">
-          <h2 style="font-size: 16px; color: #002A5D; border-bottom: 1px solid #cbd5e1; padding-bottom: 5px; font-weight: bold;">4. Visual & Layout Modifications</h2>
+          <h2 style="font-size: 16px; color: #002A5D; border-bottom: 1px solid #cbd5e1; padding-bottom: 5px; font-weight: bold;">${htmlSecVisual}. Visual & Layout Modifications</h2>
       `;
       if (report.visualChanges.length === 0) {
         html += `<p style="font-size: 13px; color: #64748b; font-style: italic;">No visual modifications identified.</p>`;
@@ -1092,7 +1104,7 @@ export default function App() {
     if (auditNotes.trim()) {
       html += `
         <div style="margin-top: 30px; border-top: 2px solid #cbd5e1; padding-top: 15px;">
-          <h2 style="font-size: 16px; color: #002A5D; font-weight: bold; margin-bottom: 10px;">5. Compliance Notes & Audit Sign-Off</h2>
+          <h2 style="font-size: 16px; color: #002A5D; font-weight: bold; margin-bottom: 10px;">${htmlSecSignoff}. Compliance Notes & Audit Sign-Off</h2>
           <p style="font-size: 13px; line-height: 1.6; color: #334155; margin: 0 0 20px 0; font-style: italic;">${escapeHtml(auditNotes)}</p>
           
           <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
@@ -1137,6 +1149,16 @@ export default function App() {
   const generateMarkdownReport = (): string => {
     if (!report) return '';
 
+    let mdSecText = 0;
+    let mdSecTable = 0;
+    let mdSecVisual = 0;
+    let mdSecSignoff = 0;
+    let currentMdNum = 1;
+    if (includeTextChanges) { currentMdNum++; mdSecText = currentMdNum; }
+    if (includeTableChanges) { currentMdNum++; mdSecTable = currentMdNum; }
+    if (includeVisualChanges) { currentMdNum++; mdSecVisual = currentMdNum; }
+    if (auditNotes.trim()) { currentMdNum++; mdSecSignoff = currentMdNum; }
+
     const getSeverityLabel = (sev: 'low' | 'medium' | 'high') => {
       return sev.toUpperCase();
     };
@@ -1154,7 +1176,7 @@ export default function App() {
     md += `${report.overallSummary}\n\n`;
 
     if (includeTextChanges) {
-      md += `## 2. Text Modifications\n\n`;
+      md += `## ${mdSecText}. Text Modifications\n\n`;
       if (report.textChanges.length === 0) {
         md += `No text modifications identified.\n\n`;
       } else {
@@ -1176,7 +1198,7 @@ export default function App() {
     }
 
     if (includeTableChanges) {
-      md += `## 3. Table Modifications\n\n`;
+      md += `## ${mdSecTable}. Table Modifications\n\n`;
       if (report.tableChanges.length === 0) {
         md += `No table modifications identified.\n\n`;
       } else {
@@ -1198,7 +1220,7 @@ export default function App() {
     }
 
     if (includeVisualChanges) {
-      md += `## 4. Visual & Layout Modifications\n\n`;
+      md += `## ${mdSecVisual}. Visual & Layout Modifications\n\n`;
       if (report.visualChanges.length === 0) {
         md += `No visual modifications identified.\n\n`;
       } else {
@@ -1221,7 +1243,7 @@ export default function App() {
 
     if (auditNotes.trim()) {
       md += `---\n\n`;
-      md += `## 5. Compliance Notes & Audit Sign-Off\n`;
+      md += `## ${mdSecSignoff}. Compliance Notes & Audit Sign-Off\n`;
       md += `*${auditNotes}*\n\n`;
       md += `**Auditor Signature:** ___________________________ (Lead Auditor: ${auditorName})\n\n`;
       md += `**Sign-off Date:** ${auditDate}\n`;
@@ -1250,6 +1272,214 @@ export default function App() {
     a.click();
     URL.revokeObjectURL(url);
   };
+
+  const generateJSONPayload = (): string => {
+    if (!report) return '';
+    
+    const payload = {
+      reportMetadata: {
+        title: publisherTitle,
+        originalDocument: files.find(f => f.filename === fileA)?.displayName || fileA || '',
+        revisedDocument: files.find(f => f.filename === fileB)?.displayName || fileB || '',
+        leadAuditor: auditorName,
+        department: auditorDept,
+        auditDate: auditDate,
+        riskRating: report.riskRating,
+        overallSummary: report.overallSummary,
+        complianceNotes: auditNotes
+      },
+      changes: [
+        ...(includeTextChanges ? report.textChanges.map(c => ({
+          category: 'text',
+          page: c.page,
+          type: c.type,
+          description: c.description,
+          originalText: c.originalText || null,
+          revisedText: c.revisedText || null,
+          severity: c.severity,
+          potentialImpact: c.potentialImpact || null
+        })) : []),
+        ...(includeTableChanges ? report.tableChanges.map(c => ({
+          category: 'table',
+          page: c.page,
+          type: c.type,
+          tableName: c.tableName,
+          description: c.description,
+          originalText: c.originalText || null,
+          revisedText: c.revisedText || null,
+          severity: c.severity,
+          potentialImpact: c.potentialImpact || null
+        })) : []),
+        ...(includeVisualChanges ? report.visualChanges.map(c => ({
+          category: 'visual',
+          page: c.page,
+          type: c.type,
+          description: c.description,
+          originalText: c.originalText || null,
+          revisedText: c.revisedText || null,
+          severity: c.severity,
+          potentialImpact: c.potentialImpact || null
+        })) : [])
+      ]
+    };
+
+    return JSON.stringify(payload, null, 2);
+  };
+
+  const generateSQLScript = (): string => {
+    if (!report) return '';
+
+    const escapeSQL = (str: string | null | undefined): string => {
+      if (str === null || str === undefined) return 'NULL';
+      return `'${str.replace(/'/g, "''")}'`;
+    };
+
+    const origDoc = files.find(f => f.filename === fileA)?.displayName || fileA || '';
+    const revDoc = files.find(f => f.filename === fileB)?.displayName || fileB || '';
+
+    let sql = `-- =========================================================\n`;
+    sql += `-- PostgreSQL Migration Script for AlloCap Comparison Audit\n`;
+    sql += `-- Generated on: ${new Date().toISOString()}\n`;
+    sql += `-- =========================================================\n\n`;
+
+    sql += `CREATE TABLE IF NOT EXISTS document_audit_runs (\n`;
+    sql += `    id SERIAL PRIMARY KEY,\n`;
+    sql += `    report_title VARCHAR(255) NOT NULL,\n`;
+    sql += `    original_document VARCHAR(255) NOT NULL,\n`;
+    sql += `    revised_document VARCHAR(255) NOT NULL,\n`;
+    sql += `    lead_auditor VARCHAR(255),\n`;
+    sql += `    department VARCHAR(255),\n`;
+    sql += `    audit_date DATE,\n`;
+    sql += `    risk_rating VARCHAR(50),\n`;
+    sql += `    overall_summary TEXT,\n`;
+    sql += `    compliance_notes TEXT,\n`;
+    sql += `    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP\n`;
+    sql += `);\n\n`;
+
+    sql += `CREATE TABLE IF NOT EXISTS audit_change_entries (\n`;
+    sql += `    id SERIAL PRIMARY KEY,\n`;
+    sql += `    audit_run_id INT REFERENCES document_audit_runs(id) ON DELETE CASCADE,\n`;
+    sql += `    change_category VARCHAR(50) NOT NULL, -- 'text', 'table', 'visual'\n`;
+    sql += `    page VARCHAR(50),\n`;
+    sql += `    change_type VARCHAR(100),\n`;
+    sql += `    table_name VARCHAR(255), -- only for table changes\n`;
+    sql += `    description TEXT,\n`;
+    sql += `    original_text TEXT,\n`;
+    sql += `    revised_text TEXT,\n`;
+    sql += `    severity VARCHAR(50),\n`;
+    sql += `    potential_impact TEXT\n`;
+    sql += `);\n\n`;
+
+    sql += `BEGIN;\n\n`;
+    
+    sql += `-- 1. Insert the Audit Run record\n`;
+    sql += `INSERT INTO document_audit_runs (report_title, original_document, revised_document, lead_auditor, department, audit_date, risk_rating, overall_summary, compliance_notes)\n`;
+    sql += `VALUES (\n`;
+    sql += `    ${escapeSQL(publisherTitle)},\n`;
+    sql += `    ${escapeSQL(origDoc)},\n`;
+    sql += `    ${escapeSQL(revDoc)},\n`;
+    sql += `    ${escapeSQL(auditorName)},\n`;
+    sql += `    ${escapeSQL(auditorDept)},\n`;
+    sql += `    ${escapeSQL(auditDate)},\n`;
+    sql += `    ${escapeSQL(report.riskRating)},\n`;
+    sql += `    ${escapeSQL(report.overallSummary)},\n`;
+    sql += `    ${escapeSQL(auditNotes)}\n`;
+    sql += `);\n\n`;
+
+    sql += `-- 2. Insert individual change entries (using the latest run ID)\n`;
+    sql += `DO $$\n`;
+    sql += `DECLARE\n`;
+    sql += `    v_run_id INT;\n`;
+    sql += `BEGIN\n`;
+    sql += `    SELECT id INTO v_run_id FROM document_audit_runs ORDER BY id DESC LIMIT 1;\n\n`;
+
+    let inserts = '';
+    
+    if (includeTextChanges) {
+      report.textChanges.forEach(c => {
+        inserts += `    INSERT INTO audit_change_entries (audit_run_id, change_category, page, change_type, table_name, description, original_text, revised_text, severity, potential_impact)\n`;
+        inserts += `    VALUES (v_run_id, 'text', ${escapeSQL(c.page)}, ${escapeSQL(c.type)}, NULL, ${escapeSQL(c.description)}, ${escapeSQL(c.originalText)}, ${escapeSQL(c.revisedText)}, ${escapeSQL(c.severity)}, ${escapeSQL(c.potentialImpact)});\n\n`;
+      });
+    }
+
+    if (includeTableChanges) {
+      report.tableChanges.forEach(c => {
+        inserts += `    INSERT INTO audit_change_entries (audit_run_id, change_category, page, change_type, table_name, description, original_text, revised_text, severity, potential_impact)\n`;
+        inserts += `    VALUES (v_run_id, 'table', ${escapeSQL(c.page)}, ${escapeSQL(c.type)}, ${escapeSQL(c.tableName)}, ${escapeSQL(c.description)}, ${escapeSQL(c.originalText)}, ${escapeSQL(c.revisedText)}, ${escapeSQL(c.severity)}, ${escapeSQL(c.potentialImpact)});\n\n`;
+      });
+    }
+
+    if (includeVisualChanges) {
+      report.visualChanges.forEach(c => {
+        inserts += `    INSERT INTO audit_change_entries (audit_run_id, change_category, page, change_type, table_name, description, original_text, revised_text, severity, potential_impact)\n`;
+        inserts += `    VALUES (v_run_id, 'visual', ${escapeSQL(c.page)}, ${escapeSQL(c.type)}, NULL, ${escapeSQL(c.description)}, ${escapeSQL(c.originalText)}, ${escapeSQL(c.revisedText)}, ${escapeSQL(c.severity)}, ${escapeSQL(c.potentialImpact)});\n\n`;
+      });
+    }
+
+    if (inserts) {
+      sql += inserts;
+    } else {
+      sql += `    -- No changes selected to insert\n`;
+    }
+
+    sql += `END $$;\n\n`;
+    sql += `COMMIT;\n`;
+
+    return sql;
+  };
+
+  const copyJSONPayload = () => {
+    const jsonStr = generateJSONPayload();
+    if (!jsonStr) return;
+    navigator.clipboard.writeText(jsonStr).then(() => {
+      setIsCopiedJson(true);
+      setTimeout(() => setIsCopiedJson(false), 3000);
+    });
+  };
+
+  const downloadJSONPayload = () => {
+    const jsonStr = generateJSONPayload();
+    if (!jsonStr) return;
+    const blob = new Blob([jsonStr], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${publisherTitle.replace(/\s+/g, '_')}_Audit_Payload.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const copySQLScript = () => {
+    const sqlStr = generateSQLScript();
+    if (!sqlStr) return;
+    navigator.clipboard.writeText(sqlStr).then(() => {
+      setIsCopiedSql(true);
+      setTimeout(() => setIsCopiedSql(false), 3000);
+    });
+  };
+
+  const downloadSQLScript = () => {
+    const sqlStr = generateSQLScript();
+    if (!sqlStr) return;
+    const blob = new Blob([sqlStr], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${publisherTitle.replace(/\s+/g, '_')}_Database_Ingest.sql`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  // Dynamic section numbers for HTML print preview
+  let printSecText = 0;
+  let printSecTable = 0;
+  let printSecVisual = 0;
+  let printSecSignoff = 0;
+  let currentNum = 1;
+  if (includeTextChanges) { currentNum++; printSecText = currentNum; }
+  if (includeTableChanges) { currentNum++; printSecTable = currentNum; }
+  if (includeVisualChanges) { currentNum++; printSecVisual = currentNum; }
+  if (auditNotes.trim()) { currentNum++; printSecSignoff = currentNum; }
 
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', background: '#f0f2f3', color: '#323639' }}>
@@ -2351,6 +2581,26 @@ export default function App() {
                     >
                       📝 Markdown View
                     </button>
+                    <button 
+                      onClick={() => setPublisherViewMode('database')}
+                      style={{
+                        padding: '6px 16px',
+                        borderRadius: '6px',
+                        border: 'none',
+                        fontSize: '12px',
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                        background: publisherViewMode === 'database' ? '#015294' : 'transparent',
+                        color: publisherViewMode === 'database' ? '#ffffff' : '#64748b',
+                        boxShadow: publisherViewMode === 'database' ? '0 1px 3px rgba(0,0,0,0.15)' : 'none',
+                        transition: 'all 0.2s',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px'
+                      }}
+                    >
+                      ⚙️ Database Export
+                    </button>
                   </div>
 
                   {/* HTML Report Sheet (always rendered, hidden on screen if in markdown mode) */}
@@ -2431,7 +2681,7 @@ export default function App() {
                     {/* Section 2: Text Changes */}
                     {includeTextChanges && (
                       <div className="print-section" style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                        <h3 style={{ fontSize: '14px', color: '#002A5D', fontWeight: 700, borderBottom: '1px solid #e2e8f0', paddingBottom: '4px' }}>2. Text Modifications</h3>
+                        <h3 style={{ fontSize: '14px', color: '#002A5D', fontWeight: 700, borderBottom: '1px solid #e2e8f0', paddingBottom: '4px' }}>{printSecText}. Text Modifications</h3>
                         {report.textChanges.length === 0 ? (
                           <p style={{ fontSize: '12px', color: '#64748b', fontStyle: 'italic', margin: 0 }}>No text modifications identified.</p>
                         ) : (
@@ -2482,7 +2732,7 @@ export default function App() {
                     {/* Section 3: Table Changes */}
                     {includeTableChanges && (
                       <div className="print-section" style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                        <h3 style={{ fontSize: '14px', color: '#002A5D', fontWeight: 700, borderBottom: '1px solid #e2e8f0', paddingBottom: '4px' }}>3. Table Modifications</h3>
+                        <h3 style={{ fontSize: '14px', color: '#002A5D', fontWeight: 700, borderBottom: '1px solid #e2e8f0', paddingBottom: '4px' }}>{printSecTable}. Table Modifications</h3>
                         {report.tableChanges.length === 0 ? (
                           <p style={{ fontSize: '12px', color: '#64748b', fontStyle: 'italic', margin: 0 }}>No table modifications identified.</p>
                         ) : (
@@ -2533,7 +2783,7 @@ export default function App() {
                     {/* Section 4: Visual Changes */}
                     {includeVisualChanges && (
                       <div className="print-section" style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                        <h3 style={{ fontSize: '14px', color: '#002A5D', fontWeight: 700, borderBottom: '1px solid #e2e8f0', paddingBottom: '4px' }}>4. Visual & Layout Modifications</h3>
+                        <h3 style={{ fontSize: '14px', color: '#002A5D', fontWeight: 700, borderBottom: '1px solid #e2e8f0', paddingBottom: '4px' }}>{printSecVisual}. Visual & Layout Modifications</h3>
                         {report.visualChanges.length === 0 ? (
                           <p style={{ fontSize: '12px', color: '#64748b', fontStyle: 'italic', margin: 0 }}>No visual modifications identified.</p>
                         ) : (
@@ -2584,7 +2834,7 @@ export default function App() {
                     {/* Section 5: Auditor Notes & Sign-off */}
                     {auditNotes.trim() && (
                       <div className="print-section" style={{ display: 'flex', flexDirection: 'column', gap: '8px', borderTop: '2px solid #e2e8f0', paddingTop: '16px', marginTop: '12px', pageBreakInside: 'avoid', breakInside: 'avoid' }}>
-                        <h3 style={{ fontSize: '14px', color: '#002A5D', fontWeight: 700 }}>5. Compliance Notes & Audit Sign-Off</h3>
+                        <h3 style={{ fontSize: '14px', color: '#002A5D', fontWeight: 700 }}>{printSecSignoff}. Compliance Notes & Audit Sign-Off</h3>
                         <p style={{ fontSize: '12.5px', color: '#334155', lineHeight: '1.6', margin: 0, fontStyle: 'italic' }}>
                           {auditNotes}
                         </p>
@@ -2656,6 +2906,172 @@ export default function App() {
                     </div>
                     <div style={{ textAlign: 'left' }}>
                       {renderMarkdownAsHtml(generateMarkdownReport())}
+                    </div>
+                  </div>
+
+                  {/* Database Export Sheet (always rendered, hidden on screen if not in database mode, never printed) */}
+                  <div 
+                    className={`report-paper-page database-preview-block ${publisherViewMode === 'database' ? '' : 'hidden-screen'}`}
+                    style={{ 
+                      background: '#ffffff', 
+                      border: '1px solid #cbd5e1', 
+                      borderRadius: '4px', 
+                      boxShadow: '0 8px 30px rgba(0, 0, 0, 0.08)', 
+                      padding: '30px 40px', 
+                      width: '100%', 
+                      maxWidth: '1000px', 
+                      display: 'flex', 
+                      flexDirection: 'column', 
+                      gap: '20px' 
+                    }}
+                  >
+                    <div className="no-print" style={{ display: 'flex', flexDirection: 'column', gap: '8px', borderBottom: '1px solid #e2e8f0', paddingBottom: '16px' }}>
+                      <h2 style={{ fontSize: '18px', color: '#002A5D', fontWeight: 800, margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <span>⚙️ Database Export Integration</span>
+                      </h2>
+                      <p style={{ fontSize: '12.5px', color: '#475569', margin: 0, lineHeight: '1.5' }}>
+                        Integrate this comparison run directly with your system. We support two integration pathways: a structured <strong>JSON payload</strong> containing the audit runs & categorized change logs, or a transaction-wrapped <strong>PostgreSQL DDL & DML script</strong> to initialize schemas and insert audit entries.
+                      </p>
+                    </div>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
+                      {/* Left Column: JSON Payload */}
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <span style={{ fontSize: '12px', fontWeight: 700, color: '#002A5D', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <span style={{ padding: '2px 6px', background: 'rgba(0, 126, 158, 0.1)', color: '#007E9E', borderRadius: '4px', fontSize: '10px' }}>JSON</span>
+                            Ingestion Payload
+                          </span>
+                          <div style={{ display: 'flex', gap: '6px' }}>
+                            <button 
+                              onClick={copyJSONPayload}
+                              style={{
+                                background: '#f1f5f9',
+                                border: '1px solid #cbd5e1',
+                                color: '#334155',
+                                padding: '4px 10px',
+                                borderRadius: '4px',
+                                fontSize: '10.5px',
+                                fontWeight: 600,
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '4px',
+                                transition: 'all 0.2s'
+                              }}
+                            >
+                              {isCopiedJson ? "✓ Copied" : "📋 Copy"}
+                            </button>
+                            <button 
+                              onClick={downloadJSONPayload}
+                              style={{
+                                background: '#f1f5f9',
+                                border: '1px solid #cbd5e1',
+                                color: '#334155',
+                                padding: '4px 10px',
+                                borderRadius: '4px',
+                                fontSize: '10.5px',
+                                fontWeight: 600,
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '4px',
+                                transition: 'all 0.2s'
+                              }}
+                            >
+                              📥 Download
+                            </button>
+                          </div>
+                        </div>
+                        <div style={{ position: 'relative', flex: 1 }}>
+                          <pre style={{
+                            margin: 0,
+                            padding: '16px',
+                            background: '#0f172a',
+                            color: '#e2e8f0',
+                            borderRadius: '6px',
+                            fontSize: '11px',
+                            fontFamily: 'Consolas, Monaco, monospace',
+                            overflow: 'auto',
+                            maxHeight: '450px',
+                            border: '1px solid #1e293b',
+                            lineHeight: '1.5',
+                            textAlign: 'left'
+                          }}>
+                            <code>{generateJSONPayload()}</code>
+                          </pre>
+                        </div>
+                      </div>
+
+                      {/* Right Column: SQL Migration */}
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <span style={{ fontSize: '12px', fontWeight: 700, color: '#002A5D', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <span style={{ padding: '2px 6px', background: 'rgba(33, 135, 76, 0.1)', color: '#21874c', borderRadius: '4px', fontSize: '10px' }}>SQL</span>
+                            PostgreSQL Migration
+                          </span>
+                          <div style={{ display: 'flex', gap: '6px' }}>
+                            <button 
+                              onClick={copySQLScript}
+                              style={{
+                                background: '#f1f5f9',
+                                border: '1px solid #cbd5e1',
+                                color: '#334155',
+                                padding: '4px 10px',
+                                borderRadius: '4px',
+                                fontSize: '10.5px',
+                                fontWeight: 600,
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '4px',
+                                transition: 'all 0.2s'
+                              }}
+                            >
+                              {isCopiedSql ? "✓ Copied" : "📋 Copy"}
+                            </button>
+                            <button 
+                              onClick={downloadSQLScript}
+                              style={{
+                                background: '#f1f5f9',
+                                border: '1px solid #cbd5e1',
+                                color: '#334155',
+                                padding: '4px 10px',
+                                borderRadius: '4px',
+                                fontSize: '10.5px',
+                                fontWeight: 600,
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '4px',
+                                transition: 'all 0.2s'
+                              }}
+                            >
+                              📥 Download
+                            </button>
+                          </div>
+                        </div>
+                        <div style={{ position: 'relative', flex: 1 }}>
+                          <pre style={{
+                            margin: 0,
+                            padding: '16px',
+                            background: '#0f172a',
+                            color: '#e2e8f0',
+                            borderRadius: '6px',
+                            fontSize: '11px',
+                            fontFamily: 'Consolas, Monaco, monospace',
+                            overflow: 'auto',
+                            maxHeight: '450px',
+                            border: '1px solid #1e293b',
+                            lineHeight: '1.5',
+                            textAlign: 'left'
+                          }}>
+                            <code style={{ display: 'block', whiteSpace: 'pre' }}>
+                              {generateSQLScript()}
+                            </code>
+                          </pre>
+                        </div>
+                      </div>
                     </div>
                   </div>
 
