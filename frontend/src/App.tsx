@@ -382,11 +382,9 @@ export default function App() {
   const [activePage, setActivePage] = useState<'compare' | 'publisher'>('compare');
 
   // Publisher Metadata State
-  const [publisherTitle, setPublisherTitle] = useState('PCG Document Comparison & Audit Report');
-  const [auditorName, setAuditorName] = useState('Lead Auditor');
-  const [auditorDept, setAuditorDept] = useState('Audit & Compliance Team');
+  const [publisherTitle, setPublisherTitle] = useState('PCG Document Comparison Report');
   const [auditDate, setAuditDate] = useState(new Date().toISOString().split('T')[0]);
-  const [auditNotes, setAuditNotes] = useState('The documents have been compared and reviewed. All identified modifications, deletions, and additions have been audited and logged below. The final version is approved for SharePoint filing.');
+  const [auditNotes, setAuditNotes] = useState('The documents have been compared and reviewed. All identified modifications, deletions, and additions have been logged below. The final version is approved for SharePoint filing.');
   const [includeTextChanges, setIncludeTextChanges] = useState(true);
   const [includeTableChanges, setIncludeTableChanges] = useState(true);
   const [includeVisualChanges, setIncludeVisualChanges] = useState(true);
@@ -395,6 +393,9 @@ export default function App() {
   const [publisherViewMode, setPublisherViewMode] = useState<'html' | 'markdown' | 'database'>('html');
   const [isCopiedJson, setIsCopiedJson] = useState(false);
   const [isCopiedSql, setIsCopiedSql] = useState(false);
+  const [dbJson, setDbJson] = useState('');
+  const [dbSql, setDbSql] = useState('');
+  const [isRefreshingDb, setIsRefreshingDb] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
@@ -650,6 +651,22 @@ export default function App() {
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [chatMessages]);
+
+  useEffect(() => {
+    if (report) {
+      setDbJson(generateJSONPayload());
+      setDbSql(generateSQLScript());
+    }
+  }, [report, publisherTitle, auditDate, auditNotes, includeTextChanges, includeTableChanges, includeVisualChanges]);
+
+  const handleRefreshDatabaseExport = () => {
+    setIsRefreshingDb(true);
+    setTimeout(() => {
+      setDbJson(generateJSONPayload());
+      setDbSql(generateSQLScript());
+      setIsRefreshingDb(false);
+    }, 400);
+  };
 
   // Upload handler
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -943,7 +960,7 @@ export default function App() {
       <div style="font-family: Arial, sans-serif; color: #323639; max-width: 800px; margin: 0 auto; padding: 20px; text-align: left; background-color: #ffffff;">
         <div style="border-bottom: 2px solid #002A5D; padding-bottom: 15px; margin-bottom: 20px;">
           <h1 style="font-family: Arial, sans-serif; font-size: 24px; color: #002A5D; margin: 0; font-weight: bold;">${escapeHtml(publisherTitle)}</h1>
-          <p style="font-size: 13px; color: #475569; margin: 5px 0 0 0;">Formal comparison audit report of corporate documentation.</p>
+          <p style="font-size: 13px; color: #475569; margin: 5px 0 0 0;">Formal comparison report of corporate documentation.</p>
         </div>
 
         <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 13px;">
@@ -956,15 +973,7 @@ export default function App() {
             <td style="padding: 10px; border: 1px solid #cbd5e1; color: #0f172a;">${escapeHtml(files.find(f => f.filename === fileB)?.displayName || fileB || '')}</td>
           </tr>
           <tr style="background-color: #f8fafc;">
-            <td style="padding: 10px; border: 1px solid #cbd5e1; font-weight: bold; color: #475569;">Lead Auditor</td>
-            <td style="padding: 10px; border: 1px solid #cbd5e1; color: #0f172a;">${escapeHtml(auditorName)}</td>
-          </tr>
-          <tr>
-            <td style="padding: 10px; border: 1px solid #cbd5e1; font-weight: bold; color: #475569;">Department</td>
-            <td style="padding: 10px; border: 1px solid #cbd5e1; color: #0f172a;">${escapeHtml(auditorDept)}</td>
-          </tr>
-          <tr style="background-color: #f8fafc;">
-            <td style="padding: 10px; border: 1px solid #cbd5e1; font-weight: bold; color: #475569;">Audit Date</td>
+            <td style="padding: 10px; border: 1px solid #cbd5e1; font-weight: bold; color: #475569;">Comparison Date</td>
             <td style="padding: 10px; border: 1px solid #cbd5e1; color: #0f172a;">${escapeHtml(auditDate)}</td>
           </tr>
           <tr>
@@ -1104,7 +1113,7 @@ export default function App() {
     if (auditNotes.trim()) {
       html += `
         <div style="margin-top: 30px; border-top: 2px solid #cbd5e1; padding-top: 15px;">
-          <h2 style="font-size: 16px; color: #002A5D; font-weight: bold; margin-bottom: 10px;">${htmlSecSignoff}. Compliance Notes & Audit Sign-Off</h2>
+          <h2 style="font-size: 16px; color: #002A5D; font-weight: bold; margin-bottom: 10px;">${htmlSecSignoff}. Comparison Notes & Sign-Off</h2>
           <p style="font-size: 13px; line-height: 1.6; color: #334155; margin: 0 0 20px 0; font-style: italic;">${escapeHtml(auditNotes)}</p>
           
           <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
@@ -1114,7 +1123,7 @@ export default function App() {
               <td style="width: 40%; padding-top: 30px; padding-bottom: 5px; border-bottom: 1px solid #cbd5e1;"></td>
             </tr>
             <tr>
-              <td style="font-size: 11px; color: #475569; padding-top: 5px;">Auditor Signature: ${escapeHtml(auditorName)}</td>
+              <td style="font-size: 11px; color: #475569; padding-top: 5px;">Authorized Signature: Lead Reviewer</td>
               <td></td>
               <td style="font-size: 11px; color: #475569; padding-top: 5px;">Date: ${escapeHtml(auditDate)}</td>
             </tr>
@@ -1166,9 +1175,7 @@ export default function App() {
     let md = `# ${publisherTitle}\n\n`;
     md += `**Original File:** ${files.find(f => f.filename === fileA)?.displayName || fileA || ''}\n`;
     md += `**Revised File:** ${files.find(f => f.filename === fileB)?.displayName || fileB || ''}\n`;
-    md += `**Lead Auditor:** ${auditorName}\n`;
-    md += `**Department:** ${auditorDept}\n`;
-    md += `**Audit Date:** ${auditDate}\n`;
+    md += `**Comparison Date:** ${auditDate}\n`;
     md += `**Risk Rating:** ${report.riskRating.toUpperCase()} RISK\n\n`;
     md += `---\n\n`;
 
@@ -1243,9 +1250,9 @@ export default function App() {
 
     if (auditNotes.trim()) {
       md += `---\n\n`;
-      md += `## ${mdSecSignoff}. Compliance Notes & Audit Sign-Off\n`;
+      md += `## ${mdSecSignoff}. Comparison Notes & Sign-Off\n`;
       md += `*${auditNotes}*\n\n`;
-      md += `**Auditor Signature:** ___________________________ (Lead Auditor: ${auditorName})\n\n`;
+      md += `**Authorized Signature:** ___________________________ (Lead Reviewer)\n\n`;
       md += `**Sign-off Date:** ${auditDate}\n`;
     }
 
@@ -1268,7 +1275,7 @@ export default function App() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `${publisherTitle.replace(/\s+/g, '_')}_Audit_Report.md`;
+    a.download = `${publisherTitle.replace(/\s+/g, '_')}_Comparison_Report.md`;
     a.click();
     URL.revokeObjectURL(url);
   };
@@ -1277,16 +1284,14 @@ export default function App() {
     if (!report) return '';
     
     const payload = {
-      reportMetadata: {
+      comparisonMetadata: {
         title: publisherTitle,
         originalDocument: files.find(f => f.filename === fileA)?.displayName || fileA || '',
         revisedDocument: files.find(f => f.filename === fileB)?.displayName || fileB || '',
-        leadAuditor: auditorName,
-        department: auditorDept,
-        auditDate: auditDate,
+        comparisonDate: auditDate,
         riskRating: report.riskRating,
         overallSummary: report.overallSummary,
-        complianceNotes: auditNotes
+        comparisonNotes: auditNotes
       },
       changes: [
         ...(includeTextChanges ? report.textChanges.map(c => ({
@@ -1338,27 +1343,25 @@ export default function App() {
     const revDoc = files.find(f => f.filename === fileB)?.displayName || fileB || '';
 
     let sql = `-- =========================================================\n`;
-    sql += `-- PostgreSQL Migration Script for AlloCap Comparison Audit\n`;
+    sql += `-- PostgreSQL Migration Script for AlloCap Document Comparison\n`;
     sql += `-- Generated on: ${new Date().toISOString()}\n`;
     sql += `-- =========================================================\n\n`;
 
-    sql += `CREATE TABLE IF NOT EXISTS document_audit_runs (\n`;
+    sql += `CREATE TABLE IF NOT EXISTS document_comparisons (\n`;
     sql += `    id SERIAL PRIMARY KEY,\n`;
     sql += `    report_title VARCHAR(255) NOT NULL,\n`;
     sql += `    original_document VARCHAR(255) NOT NULL,\n`;
     sql += `    revised_document VARCHAR(255) NOT NULL,\n`;
-    sql += `    lead_auditor VARCHAR(255),\n`;
-    sql += `    department VARCHAR(255),\n`;
-    sql += `    audit_date DATE,\n`;
+    sql += `    comparison_date DATE,\n`;
     sql += `    risk_rating VARCHAR(50),\n`;
     sql += `    overall_summary TEXT,\n`;
-    sql += `    compliance_notes TEXT,\n`;
+    sql += `    comparison_notes TEXT,\n`;
     sql += `    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP\n`;
     sql += `);\n\n`;
 
-    sql += `CREATE TABLE IF NOT EXISTS audit_change_entries (\n`;
+    sql += `CREATE TABLE IF NOT EXISTS comparison_change_entries (\n`;
     sql += `    id SERIAL PRIMARY KEY,\n`;
-    sql += `    audit_run_id INT REFERENCES document_audit_runs(id) ON DELETE CASCADE,\n`;
+    sql += `    comparison_id INT REFERENCES document_comparisons(id) ON DELETE CASCADE,\n`;
     sql += `    change_category VARCHAR(50) NOT NULL, -- 'text', 'table', 'visual'\n`;
     sql += `    page VARCHAR(50),\n`;
     sql += `    change_type VARCHAR(100),\n`;
@@ -1372,47 +1375,45 @@ export default function App() {
 
     sql += `BEGIN;\n\n`;
     
-    sql += `-- 1. Insert the Audit Run record\n`;
-    sql += `INSERT INTO document_audit_runs (report_title, original_document, revised_document, lead_auditor, department, audit_date, risk_rating, overall_summary, compliance_notes)\n`;
+    sql += `-- 1. Insert the Comparison Run record\n`;
+    sql += `INSERT INTO document_comparisons (report_title, original_document, revised_document, comparison_date, risk_rating, overall_summary, comparison_notes)\n`;
     sql += `VALUES (\n`;
     sql += `    ${escapeSQL(publisherTitle)},\n`;
     sql += `    ${escapeSQL(origDoc)},\n`;
     sql += `    ${escapeSQL(revDoc)},\n`;
-    sql += `    ${escapeSQL(auditorName)},\n`;
-    sql += `    ${escapeSQL(auditorDept)},\n`;
     sql += `    ${escapeSQL(auditDate)},\n`;
     sql += `    ${escapeSQL(report.riskRating)},\n`;
     sql += `    ${escapeSQL(report.overallSummary)},\n`;
     sql += `    ${escapeSQL(auditNotes)}\n`;
     sql += `);\n\n`;
 
-    sql += `-- 2. Insert individual change entries (using the latest run ID)\n`;
+    sql += `-- 2. Insert individual change entries (using the latest comparison ID)\n`;
     sql += `DO $$\n`;
     sql += `DECLARE\n`;
-    sql += `    v_run_id INT;\n`;
+    sql += `    v_comparison_id INT;\n`;
     sql += `BEGIN\n`;
-    sql += `    SELECT id INTO v_run_id FROM document_audit_runs ORDER BY id DESC LIMIT 1;\n\n`;
+    sql += `    SELECT id INTO v_comparison_id FROM document_comparisons ORDER BY id DESC LIMIT 1;\n\n`;
 
     let inserts = '';
     
     if (includeTextChanges) {
       report.textChanges.forEach(c => {
-        inserts += `    INSERT INTO audit_change_entries (audit_run_id, change_category, page, change_type, table_name, description, original_text, revised_text, severity, potential_impact)\n`;
-        inserts += `    VALUES (v_run_id, 'text', ${escapeSQL(c.page)}, ${escapeSQL(c.type)}, NULL, ${escapeSQL(c.description)}, ${escapeSQL(c.originalText)}, ${escapeSQL(c.revisedText)}, ${escapeSQL(c.severity)}, ${escapeSQL(c.potentialImpact)});\n\n`;
+        inserts += `    INSERT INTO comparison_change_entries (comparison_id, change_category, page, change_type, table_name, description, original_text, revised_text, severity, potential_impact)\n`;
+        inserts += `    VALUES (v_comparison_id, 'text', ${escapeSQL(c.page)}, ${escapeSQL(c.type)}, NULL, ${escapeSQL(c.description)}, ${escapeSQL(c.originalText)}, ${escapeSQL(c.revisedText)}, ${escapeSQL(c.severity)}, ${escapeSQL(c.potentialImpact)});\n\n`;
       });
     }
 
     if (includeTableChanges) {
       report.tableChanges.forEach(c => {
-        inserts += `    INSERT INTO audit_change_entries (audit_run_id, change_category, page, change_type, table_name, description, original_text, revised_text, severity, potential_impact)\n`;
-        inserts += `    VALUES (v_run_id, 'table', ${escapeSQL(c.page)}, ${escapeSQL(c.type)}, ${escapeSQL(c.tableName)}, ${escapeSQL(c.description)}, ${escapeSQL(c.originalText)}, ${escapeSQL(c.revisedText)}, ${escapeSQL(c.severity)}, ${escapeSQL(c.potentialImpact)});\n\n`;
+        inserts += `    INSERT INTO comparison_change_entries (comparison_id, change_category, page, change_type, table_name, description, original_text, revised_text, severity, potential_impact)\n`;
+        inserts += `    VALUES (v_comparison_id, 'table', ${escapeSQL(c.page)}, ${escapeSQL(c.type)}, ${escapeSQL(c.tableName)}, ${escapeSQL(c.description)}, ${escapeSQL(c.originalText)}, ${escapeSQL(c.revisedText)}, ${escapeSQL(c.severity)}, ${escapeSQL(c.potentialImpact)});\n\n`;
       });
     }
 
     if (includeVisualChanges) {
       report.visualChanges.forEach(c => {
-        inserts += `    INSERT INTO audit_change_entries (audit_run_id, change_category, page, change_type, table_name, description, original_text, revised_text, severity, potential_impact)\n`;
-        inserts += `    VALUES (v_run_id, 'visual', ${escapeSQL(c.page)}, ${escapeSQL(c.type)}, NULL, ${escapeSQL(c.description)}, ${escapeSQL(c.originalText)}, ${escapeSQL(c.revisedText)}, ${escapeSQL(c.severity)}, ${escapeSQL(c.potentialImpact)});\n\n`;
+        inserts += `    INSERT INTO comparison_change_entries (comparison_id, change_category, page, change_type, table_name, description, original_text, revised_text, severity, potential_impact)\n`;
+        inserts += `    VALUES (v_comparison_id, 'visual', ${escapeSQL(c.page)}, ${escapeSQL(c.type)}, NULL, ${escapeSQL(c.description)}, ${escapeSQL(c.originalText)}, ${escapeSQL(c.revisedText)}, ${escapeSQL(c.severity)}, ${escapeSQL(c.potentialImpact)});\n\n`;
       });
     }
 
@@ -1444,7 +1445,7 @@ export default function App() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `${publisherTitle.replace(/\s+/g, '_')}_Audit_Payload.json`;
+    a.download = `${publisherTitle.replace(/\s+/g, '_')}_Comparison_Payload.json`;
     a.click();
     URL.revokeObjectURL(url);
   };
@@ -1465,7 +1466,7 @@ export default function App() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `${publisherTitle.replace(/\s+/g, '_')}_Database_Ingest.sql`;
+    a.download = `${publisherTitle.replace(/\s+/g, '_')}_Comparison_Ingest.sql`;
     a.click();
     URL.revokeObjectURL(url);
   };
@@ -1615,12 +1616,12 @@ export default function App() {
                 Compare Workspace
               </button>
 
-              {/* Audit Report Publisher */}
+              {/* Comparison Report Publisher */}
               <button 
                 className={`nav-sub-item ${activePage === 'publisher' ? 'active' : ''}`}
                 onClick={() => setActivePage('publisher')}
               >
-                📜 Audit Report Publisher
+                📜 Comparison Report Publisher
               </button>
               
               {/* Document Storage Slide Toggler */}
@@ -2421,31 +2422,9 @@ export default function App() {
                     />
                   </div>
 
-                  {/* Auditor Name input */}
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                    <label style={{ fontSize: '11px', fontWeight: 600, color: '#475569' }}>Auditor Name</label>
-                    <input 
-                      type="text" 
-                      value={auditorName}
-                      onChange={(e) => setAuditorName(e.target.value)}
-                      style={{ padding: '8px 10px', fontSize: '12.5px', border: '1px solid #cbd5e1', borderRadius: '4px', outline: 'none' }}
-                    />
-                  </div>
-
-                  {/* Department input */}
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                    <label style={{ fontSize: '11px', fontWeight: 600, color: '#475569' }}>Department</label>
-                    <input 
-                      type="text" 
-                      value={auditorDept}
-                      onChange={(e) => setAuditorDept(e.target.value)}
-                      style={{ padding: '8px 10px', fontSize: '12.5px', border: '1px solid #cbd5e1', borderRadius: '4px', outline: 'none' }}
-                    />
-                  </div>
-
                   {/* Date input */}
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                    <label style={{ fontSize: '11px', fontWeight: 600, color: '#475569' }}>Audit Date</label>
+                    <label style={{ fontSize: '11px', fontWeight: 600, color: '#475569' }}>Comparison Date</label>
                     <input 
                       type="date" 
                       value={auditDate}
@@ -2456,7 +2435,7 @@ export default function App() {
 
                   {/* Auditor Notes input */}
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                    <label style={{ fontSize: '11px', fontWeight: 600, color: '#475569' }}>Auditor Notes & Sign-off Summary</label>
+                    <label style={{ fontSize: '11px', fontWeight: 600, color: '#475569' }}>Comparison Notes & Sign-off Summary</label>
                     <textarea 
                       value={auditNotes}
                       onChange={(e) => setAuditNotes(e.target.value)}
@@ -2610,7 +2589,7 @@ export default function App() {
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '2px solid #002A5D', paddingBottom: '16px' }}>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                         <h1 style={{ fontSize: '22px', color: '#002A5D', fontWeight: 800, margin: 0 }}>{publisherTitle}</h1>
-                        <p style={{ fontSize: '12px', color: '#475569', margin: 0 }}>Formal comparison audit report of corporate documentation.</p>
+                        <p style={{ fontSize: '12px', color: '#475569', margin: 0 }}>Formal comparison report of corporate documentation.</p>
                       </div>
                       
                       {/* PCG Columns Logo */}
@@ -2642,15 +2621,7 @@ export default function App() {
                         <span style={{ color: '#0f172a', fontWeight: 500, wordBreak: 'break-all' }}>{files.find(f => f.filename === fileB)?.displayName || fileB}</span>
                       </div>
                       <div>
-                        <span style={{ fontWeight: 600, color: '#475569', display: 'block', textTransform: 'uppercase', fontSize: '9.5px', letterSpacing: '0.5px' }}>Lead Auditor</span>
-                        <span style={{ color: '#0f172a', fontWeight: 500 }}>{auditorName}</span>
-                      </div>
-                      <div>
-                        <span style={{ fontWeight: 600, color: '#475569', display: 'block', textTransform: 'uppercase', fontSize: '9.5px', letterSpacing: '0.5px' }}>Department</span>
-                        <span style={{ color: '#0f172a', fontWeight: 500 }}>{auditorDept}</span>
-                      </div>
-                      <div>
-                        <span style={{ fontWeight: 600, color: '#475569', display: 'block', textTransform: 'uppercase', fontSize: '9.5px', letterSpacing: '0.5px' }}>Audit Date</span>
+                        <span style={{ fontWeight: 600, color: '#475569', display: 'block', textTransform: 'uppercase', fontSize: '9.5px', letterSpacing: '0.5px' }}>Comparison Date</span>
                         <span style={{ color: '#0f172a', fontWeight: 500 }}>{auditDate}</span>
                       </div>
                       <div>
@@ -2831,10 +2802,10 @@ export default function App() {
                       </div>
                     )}
 
-                    {/* Section 5: Auditor Notes & Sign-off */}
+                    {/* Section 5: Comparison Notes & Sign-off */}
                     {auditNotes.trim() && (
                       <div className="print-section" style={{ display: 'flex', flexDirection: 'column', gap: '8px', borderTop: '2px solid #e2e8f0', paddingTop: '16px', marginTop: '12px', pageBreakInside: 'avoid', breakInside: 'avoid' }}>
-                        <h3 style={{ fontSize: '14px', color: '#002A5D', fontWeight: 700 }}>{printSecSignoff}. Compliance Notes & Audit Sign-Off</h3>
+                        <h3 style={{ fontSize: '14px', color: '#002A5D', fontWeight: 700 }}>{printSecSignoff}. Comparison Notes & Sign-Off</h3>
                         <p style={{ fontSize: '12.5px', color: '#334155', lineHeight: '1.6', margin: 0, fontStyle: 'italic' }}>
                           {auditNotes}
                         </p>
@@ -2842,8 +2813,8 @@ export default function App() {
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '40px', marginTop: '30px' }}>
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                             <div style={{ borderBottom: '1px solid #cbd5e1', height: '24px' }}></div>
-                            <span style={{ fontSize: '11px', fontWeight: 600, color: '#475569' }}>Auditor Signature</span>
-                            <span style={{ fontSize: '10px', color: '#64748b' }}>{auditorName}</span>
+                            <span style={{ fontSize: '11px', fontWeight: 600, color: '#475569' }}>Authorized Signature</span>
+                            <span style={{ fontSize: '10px', color: '#64748b' }}>Lead Reviewer</span>
                           </div>
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                             <div style={{ borderBottom: '1px solid #cbd5e1', height: '24px' }}></div>
@@ -2862,7 +2833,7 @@ export default function App() {
                     style={{ background: '#ffffff', border: '1px solid #cbd5e1', borderRadius: '4px', boxShadow: '0 8px 30px rgba(0, 0, 0, 0.08)', padding: '40px 50px', width: '100%', maxWidth: '800px', display: 'flex', flexDirection: 'column', gap: '16px' }}
                   >
                     <div className="no-print" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #e2e8f0', paddingBottom: '12px', marginBottom: '8px' }}>
-                      <span style={{ fontSize: '11px', color: '#64748b', fontFamily: 'monospace', fontWeight: 600 }}>{publisherTitle.toLowerCase().replace(/\s+/g, '_')}_audit_report.md</span>
+                      <span style={{ fontSize: '11px', color: '#64748b', fontFamily: 'monospace', fontWeight: 600 }}>{publisherTitle.toLowerCase().replace(/\s+/g, '_')}_comparison_report.md</span>
                       <div style={{ display: 'flex', gap: '8px' }}>
                         <button 
                           onClick={copyMarkdownReport}
@@ -2925,18 +2896,39 @@ export default function App() {
                       gap: '20px' 
                     }}
                   >
-                    <div className="no-print" style={{ display: 'flex', flexDirection: 'column', gap: '8px', borderBottom: '1px solid #e2e8f0', paddingBottom: '16px' }}>
-                      <h2 style={{ fontSize: '18px', color: '#002A5D', fontWeight: 800, margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <span>⚙️ Database Export Integration</span>
-                      </h2>
-                      <p style={{ fontSize: '12.5px', color: '#475569', margin: 0, lineHeight: '1.5' }}>
-                        Integrate this comparison run directly with your system. We support two integration pathways: a structured <strong>JSON payload</strong> containing the audit runs & categorized change logs, or a transaction-wrapped <strong>PostgreSQL DDL & DML script</strong> to initialize schemas and insert audit entries.
-                      </p>
+                    <div className="no-print" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #e2e8f0', paddingBottom: '16px', gap: '20px' }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', textAlign: 'left' }}>
+                        <h2 style={{ fontSize: '18px', color: '#002A5D', fontWeight: 800, margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <span>⚙️ Database Export Integration</span>
+                        </h2>
+                        <p style={{ fontSize: '12.5px', color: '#475569', margin: 0, lineHeight: '1.5' }}>
+                          Integrate this comparison run directly with your system. We support two integration pathways: a structured <strong>JSON payload</strong> containing the comparison metadata & categorized change logs, or a transaction-wrapped <strong>PostgreSQL DDL & DML script</strong> to initialize schemas and insert comparison entries.
+                        </p>
+                      </div>
+                      <button 
+                        onClick={handleRefreshDatabaseExport}
+                        disabled={isRefreshingDb}
+                        className="btn-primary"
+                        style={{ 
+                          flexShrink: 0, 
+                          background: '#015294', 
+                          border: '1px solid #004080', 
+                          padding: '10px 16px', 
+                          fontSize: '12.5px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '8px',
+                          height: 'fit-content'
+                        }}
+                      >
+                        <RefreshCw size={14} className={isRefreshingDb ? 'spin' : ''} />
+                        {isRefreshingDb ? "Rerunning..." : "Rerun Export Generation"}
+                      </button>
                     </div>
 
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)', gap: '24px', width: '100%' }}>
                       {/* Left Column: JSON Payload */}
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', minWidth: 0, width: '100%' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                           <span style={{ fontSize: '12px', fontWeight: 700, color: '#002A5D', display: 'flex', alignItems: 'center', gap: '6px' }}>
                             <span style={{ padding: '2px 6px', background: 'rgba(0, 126, 158, 0.1)', color: '#007E9E', borderRadius: '4px', fontSize: '10px' }}>JSON</span>
@@ -2983,7 +2975,7 @@ export default function App() {
                             </button>
                           </div>
                         </div>
-                        <div style={{ position: 'relative', flex: 1 }}>
+                        <div style={{ position: 'relative', width: '100%' }}>
                           <pre style={{
                             margin: 0,
                             padding: '16px',
@@ -2992,19 +2984,21 @@ export default function App() {
                             borderRadius: '6px',
                             fontSize: '11px',
                             fontFamily: 'Consolas, Monaco, monospace',
-                            overflow: 'auto',
+                            overflowX: 'auto',
+                            overflowY: 'auto',
                             maxHeight: '450px',
                             border: '1px solid #1e293b',
                             lineHeight: '1.5',
-                            textAlign: 'left'
+                            textAlign: 'left',
+                            width: '100%'
                           }}>
-                            <code>{generateJSONPayload()}</code>
+                            <code style={{ display: 'block', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{dbJson}</code>
                           </pre>
                         </div>
                       </div>
 
                       {/* Right Column: SQL Migration */}
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', minWidth: 0, width: '100%' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                           <span style={{ fontSize: '12px', fontWeight: 700, color: '#002A5D', display: 'flex', alignItems: 'center', gap: '6px' }}>
                             <span style={{ padding: '2px 6px', background: 'rgba(33, 135, 76, 0.1)', color: '#21874c', borderRadius: '4px', fontSize: '10px' }}>SQL</span>
@@ -3051,7 +3045,7 @@ export default function App() {
                             </button>
                           </div>
                         </div>
-                        <div style={{ position: 'relative', flex: 1 }}>
+                        <div style={{ position: 'relative', width: '100%' }}>
                           <pre style={{
                             margin: 0,
                             padding: '16px',
@@ -3060,15 +3054,15 @@ export default function App() {
                             borderRadius: '6px',
                             fontSize: '11px',
                             fontFamily: 'Consolas, Monaco, monospace',
-                            overflow: 'auto',
+                            overflowX: 'auto',
+                            overflowY: 'auto',
                             maxHeight: '450px',
                             border: '1px solid #1e293b',
                             lineHeight: '1.5',
-                            textAlign: 'left'
+                            textAlign: 'left',
+                            width: '100%'
                           }}>
-                            <code style={{ display: 'block', whiteSpace: 'pre' }}>
-                              {generateSQLScript()}
-                            </code>
+                            <code style={{ display: 'block', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{dbSql}</code>
                           </pre>
                         </div>
                       </div>
@@ -3086,12 +3080,12 @@ export default function App() {
                 </div>
                 
                 <div style={{ maxWidth: '600px' }}>
-                  <h2 style={{ fontSize: '20px', color: '#203865', marginBottom: '12px' }}>Audit Report Publisher</h2>
+                  <h2 style={{ fontSize: '20px', color: '#203865', marginBottom: '12px' }}>Comparison Report Publisher</h2>
                   
                   <div style={{ background: '#fef3c7', border: '1px solid #fcd34d', borderRadius: '8px', padding: '16px 20px', textAlign: 'left', display: 'flex', gap: '14px', alignItems: 'flex-start', color: '#d97706' }}>
                     <AlertTriangle size={24} style={{ flexShrink: 0, marginTop: '2px' }} />
                     <p style={{ fontSize: '13px', lineHeight: 1.5, margin: 0 }}>
-                      <strong>No active audit report found.</strong> Please select an original and a revised document and click <strong>Compare Documents</strong> in the Compare Workspace first, then navigate back here to publish the report.
+                      <strong>No active comparison report found.</strong> Please select an original and a revised document and click <strong>Compare Documents</strong> in the Compare Workspace first, then navigate back here to publish the report.
                     </p>
                   </div>
                 </div>
