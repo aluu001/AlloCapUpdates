@@ -26,9 +26,10 @@ const comparisonSchema = {
           description: { type: Type.STRING, description: 'Detailed explanation of the change.' },
           originalText: { type: Type.STRING, description: 'Original text or clause (if applicable).' },
           revisedText: { type: Type.STRING, description: 'Revised text or clause (if applicable).' },
-          severity: { type: Type.STRING, description: 'Severity of the change (low, medium, high).' }
+          severity: { type: Type.STRING, description: 'Severity of the change (low, medium, high).' },
+          recommendation: { type: Type.STRING, description: 'A very brief compliance recommendation or business-impact explanation for this change.' }
         },
-        required: ['page', 'type', 'description', 'severity']
+        required: ['page', 'type', 'description', 'severity', 'recommendation']
       }
     },
     tableChanges: {
@@ -43,9 +44,10 @@ const comparisonSchema = {
           description: { type: Type.STRING, description: 'Detailed explanation of table changes.' },
           originalText: { type: Type.STRING, description: 'Verbatim content or cell value before the change (originalText).' },
           revisedText: { type: Type.STRING, description: 'Verbatim content or cell value after the change (revisedText).' },
-          severity: { type: Type.STRING, description: 'Severity of the change (low, medium, high).' }
+          severity: { type: Type.STRING, description: 'Severity of the change (low, medium, high).' },
+          recommendation: { type: Type.STRING, description: 'A very brief compliance recommendation or business-impact explanation for this change.' }
         },
-        required: ['page', 'tableName', 'type', 'description', 'severity']
+        required: ['page', 'tableName', 'type', 'description', 'severity', 'recommendation']
       }
     },
     visualChanges: {
@@ -59,9 +61,10 @@ const comparisonSchema = {
           description: { type: Type.STRING, description: 'Detailed explanation of visual changes.' },
           originalText: { type: Type.STRING, description: 'The visual state or text representation before the change (originalText).' },
           revisedText: { type: Type.STRING, description: 'The visual state or text representation after the change (revisedText).' },
-          severity: { type: Type.STRING, description: 'Severity of the change (low, medium, high).' }
+          severity: { type: Type.STRING, description: 'Severity of the change (low, medium, high).' },
+          recommendation: { type: Type.STRING, description: 'A very brief compliance recommendation or business-impact explanation for this change.' }
         },
-        required: ['page', 'type', 'description', 'severity']
+        required: ['page', 'type', 'description', 'severity', 'recommendation']
       }
     }
   },
@@ -153,7 +156,9 @@ export async function compareDocumentsStream(
               2. **Tables**: Identify any changes in tables (structure, new rows, new columns, value updates). Be highly specific about the columns, row headers, or cells modified.
                  - For table changes, always extract the verbatim content/value of the table section or row before (originalText) and after (revisedText) the change. If the row or cell did not exist in one of the documents, set that field to an empty string.
               3. **Visuals & Layout**: Identify any changes in images, charts, flowchart diagrams, headers/footers, or layout styles.
-                 - For visual changes, provide a clear text description of the visual element or layout before (originalText) and after (revisedText) the change (e.g. description of old logo vs new logo, or signature block placement).
+                 - For visual changes, provide a clear text description of the visual element or layout before (originalText) and after (revisedText) the change (e.g. old logo description vs new logo description).
+              
+              For each and every identified change in text, tables, and visuals, provide a brief recommendation/understanding (in the 'recommendation' field) of what the change means in the grander scheme of document compliance, liability, or compliance risk.
               
               Generate a structured JSON output according to the requested schema.`
             },

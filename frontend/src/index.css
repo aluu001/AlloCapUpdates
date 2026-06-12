@@ -344,7 +344,53 @@ h1, h2, h3, h4, h5 {
   text-align: left;
 }
 
+/* Screen views toggle */
+.report-paper-page.hidden-screen {
+  display: none !important;
+}
+
+/* Print highlights and diff box colors */
+.print-highlight-added {
+  background-color: #fef08a !important;
+  color: #713f12 !important;
+  -webkit-print-color-adjust: exact !important;
+  print-color-adjust: exact !important;
+}
+
+.print-highlight-removed {
+  background-color: #ffe2e2 !important;
+  color: #b91c1c !important;
+  -webkit-print-color-adjust: exact !important;
+  print-color-adjust: exact !important;
+}
+
+.print-diff-box-added {
+  background-color: #f0fdf4 !important;
+  border: 1px solid #dcfce7 !important;
+  -webkit-print-color-adjust: exact !important;
+  print-color-adjust: exact !important;
+}
+
+.print-diff-box-removed {
+  background-color: #fef2f2 !important;
+  border: 1px solid #fee2e2 !important;
+  -webkit-print-color-adjust: exact !important;
+  print-color-adjust: exact !important;
+}
+
 @media print {
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    color-adjust: exact !important;
+  }
+
+  body {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    color-adjust: exact !important;
+  }
+
   @page {
     size: letter;
     margin: 0.5in !important;
@@ -407,9 +453,39 @@ h1, h2, h3, h4, h5 {
     display: block !important;
   }
 
+  .report-paper-page.hidden-screen {
+    display: block !important; /* Force HTML preview to print */
+  }
+
+  .markdown-preview-block {
+    display: none !important; /* Never print markdown code */
+  }
+
   .print-section {
     page-break-inside: avoid !important;
     break-inside: avoid !important;
     margin-bottom: 20px !important;
   }
+
+  /* Secure exact colors during printing */
+  .print-highlight-added {
+    background-color: #fef08a !important;
+    color: #713f12 !important;
+  }
+
+  .print-highlight-removed {
+    background-color: #ffe2e2 !important;
+    color: #b91c1c !important;
+  }
+
+  .print-diff-box-added {
+    background-color: #f0fdf4 !important;
+    border: 1px solid #dcfce7 !important;
+  }
+
+  .print-diff-box-removed {
+    background-color: #fef2f2 !important;
+    border: 1px solid #fee2e2 !important;
+  }
 }
+

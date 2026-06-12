@@ -32,6 +32,7 @@ interface TextChange {
   originalText?: string;
   revisedText?: string;
   severity: 'low' | 'medium' | 'high';
+  recommendation?: string;
 }
 
 interface TableChange {
@@ -42,6 +43,7 @@ interface TableChange {
   originalText?: string;
   revisedText?: string;
   severity: 'low' | 'medium' | 'high';
+  recommendation?: string;
 }
 
 interface VisualChange {
@@ -51,6 +53,7 @@ interface VisualChange {
   originalText?: string;
   revisedText?: string;
   severity: 'low' | 'medium' | 'high';
+  recommendation?: string;
 }
 
 interface ComparisonReport {
@@ -160,7 +163,7 @@ const renderOriginalDiffText = (origText: string, revText: string) => {
       {originalSegments.map((seg, idx) => {
         if (seg.type === 'removed') {
           return (
-            <span key={idx} style={{ background: '#ffe2e2', color: '#b91c1c', textDecoration: 'line-through', padding: '1px 3px', borderRadius: '2px', fontWeight: 600 }}>
+            <span key={idx} className="print-highlight-removed" style={{ background: '#ffe2e2', color: '#b91c1c', textDecoration: 'line-through', padding: '1px 3px', borderRadius: '2px', fontWeight: 600 }}>
               {seg.text}
             </span>
           );
@@ -178,7 +181,7 @@ const renderRevisedDiffText = (origText: string, revText: string) => {
       {revisedSegments.map((seg, idx) => {
         if (seg.type === 'added') {
           return (
-            <span key={idx} style={{ background: '#fef08a', color: '#713f12', padding: '1px 3px', borderRadius: '2px', fontWeight: 600 }}>
+            <span key={idx} className="print-highlight-added" style={{ background: '#fef08a', color: '#713f12', padding: '1px 3px', borderRadius: '2px', fontWeight: 600 }}>
               {seg.text}
             </span>
           );
@@ -200,7 +203,8 @@ const mockReport: ComparisonReport = {
       description: "Security deposit amount increased by $300.",
       originalText: "$2,000.00 (Two Thousand Dollars)",
       revisedText: "$2,300.00 (Two Thousand Three Hundred Dollars)",
-      severity: "high"
+      severity: "high",
+      recommendation: "Increases the initial cash requirement for the tenant by 15%. Verify if this aligns with local statutory caps on security deposits."
     },
     {
       page: "2",
@@ -208,7 +212,8 @@ const mockReport: ComparisonReport = {
       description: "Late fee grace period shortened.",
       originalText: "Late fees will apply if rent is unpaid by the 5th day of the month.",
       revisedText: "Late fees will apply if rent is unpaid by the 3rd day of the month.",
-      severity: "medium"
+      severity: "medium",
+      recommendation: "Accelerates late fee triggers. Recommend adjusting automated payroll/accounts payable schedules to avoid late fee penalties."
     },
     {
       page: "5",
@@ -216,7 +221,8 @@ const mockReport: ComparisonReport = {
       description: "Pet policy lease rider removed.",
       originalText: "Tenant is permitted to keep one domestic cat under 15 lbs on the premises.",
       revisedText: "",
-      severity: "medium"
+      severity: "medium",
+      recommendation: "Removes explicit permission to harbor pets. Confirm if the current tenant occupies the space with a pet to avoid immediate lease default."
     },
     {
       page: "6",
@@ -224,7 +230,8 @@ const mockReport: ComparisonReport = {
       description: "Indemnification clause added for parking space damages.",
       originalText: "",
       revisedText: "Tenant agrees to indemnify landlord for any claims arising from parking space usage.",
-      severity: "low"
+      severity: "low",
+      recommendation: "Shifts liability for parking space damage onto the tenant. Confirm tenant's commercial general liability insurance covers parking structure incidents."
     }
   ],
   tableChanges: [
@@ -235,7 +242,8 @@ const mockReport: ComparisonReport = {
       description: "Electricity billing shifted from Landlord to Tenant.",
       originalText: "Electricity: [x] Landlord  [ ] Tenant",
       revisedText: "Electricity: [ ] Landlord  [x] Tenant",
-      severity: "high"
+      severity: "high",
+      recommendation: "Shifts operational utility costs directly to the tenant, increasing overall monthly occupancy expenses. Adjust operational budgets accordingly."
     },
     {
       page: "3",
@@ -244,7 +252,8 @@ const mockReport: ComparisonReport = {
       description: "Added a row for High-Speed Fiber Internet fee structure ($50/mo flat fee).",
       originalText: "",
       revisedText: "+ Fiber Internet | Flat Fee | $50.00/mo | Tenant",
-      severity: "medium"
+      severity: "medium",
+      recommendation: "Introduces a mandatory flat monthly fee. Check if the internet speed aligns with business-class requirements before signing."
     }
   ],
   visualChanges: [
@@ -254,7 +263,8 @@ const mockReport: ComparisonReport = {
       description: "Landlord logo updated from 'Apex Holdings LLC' to 'Aegis Property Management Group'.",
       originalText: "Image Logo: 'Apex Holdings' with blue triangle symbol.",
       revisedText: "Image Logo: 'Aegis Property Management' with clean minimalist shield emblem.",
-      severity: "low"
+      severity: "low",
+      recommendation: "Indicates corporate branding or manager transition. Update notice dispatch addresses and invoicing systems to reflect the new management group."
     },
     {
       page: "4",
@@ -262,7 +272,8 @@ const mockReport: ComparisonReport = {
       description: "Signature block moved from page 5 to page 4 due to compact margins.",
       originalText: "Signature blocks printed on separate Page 5 lease rider.",
       revisedText: "Signature blocks condensed and shifted to bottom of Page 4.",
-      severity: "low"
+      severity: "low",
+      recommendation: "Purely structural layout optimization to save space. No legal risk identified, but verify all signatures land on the final execution page."
     }
   ]
 };
@@ -304,6 +315,8 @@ export default function App() {
   const [includeTableChanges, setIncludeTableChanges] = useState(true);
   const [includeVisualChanges, setIncludeVisualChanges] = useState(true);
   const [isCopied, setIsCopied] = useState(false);
+  const [isCopiedMd, setIsCopiedMd] = useState(false);
+  const [publisherViewMode, setPublisherViewMode] = useState<'html' | 'markdown'>('html');
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
@@ -908,6 +921,11 @@ export default function App() {
                   </td>
                 </tr>
               </table>
+              ${change.recommendation ? `
+                <div style="margin-top: 10px; padding: 8px 12px; background-color: #f8fafc; border-left: 3px solid #007E9E; font-size: 12px; color: #475569;">
+                  <strong>💡 Context & Recommendation:</strong> ${escapeHtml(change.recommendation)}
+                </div>
+              ` : ''}
             </div>
           `;
         });
@@ -943,6 +961,11 @@ export default function App() {
                   </td>
                 </tr>
               </table>
+              ${change.recommendation ? `
+                <div style="margin-top: 10px; padding: 8px 12px; background-color: #f8fafc; border-left: 3px solid #007E9E; font-size: 12px; color: #475569;">
+                  <strong>💡 Context & Recommendation:</strong> ${escapeHtml(change.recommendation)}
+                </div>
+              ` : ''}
             </div>
           `;
         });
@@ -978,6 +1001,11 @@ export default function App() {
                   </td>
                 </tr>
               </table>
+              ${change.recommendation ? `
+                <div style="margin-top: 10px; padding: 8px 12px; background-color: #f8fafc; border-left: 3px solid #007E9E; font-size: 12px; color: #475569;">
+                  <strong>💡 Context & Recommendation:</strong> ${escapeHtml(change.recommendation)}
+                </div>
+              ` : ''}
             </div>
           `;
         });
@@ -1028,6 +1056,123 @@ export default function App() {
         setTimeout(() => setIsCopied(false), 3000);
       });
     }
+  };
+
+  const generateMarkdownReport = (): string => {
+    if (!report) return '';
+
+    const getSeverityLabel = (sev: 'low' | 'medium' | 'high') => {
+      return sev.toUpperCase();
+    };
+
+    let md = `# ${publisherTitle}\n\n`;
+    md += `**Original File:** ${files.find(f => f.filename === fileA)?.displayName || fileA || ''}\n`;
+    md += `**Revised File:** ${files.find(f => f.filename === fileB)?.displayName || fileB || ''}\n`;
+    md += `**Lead Auditor:** ${auditorName}\n`;
+    md += `**Department:** ${auditorDept}\n`;
+    md += `**Audit Date:** ${auditDate}\n`;
+    md += `**Risk Rating:** ${report.riskRating.toUpperCase()} RISK\n\n`;
+    md += `---\n\n`;
+
+    md += `## 1. Executive Summary\n`;
+    md += `${report.overallSummary}\n\n`;
+
+    if (includeTextChanges) {
+      md += `## 2. Text Modifications\n\n`;
+      if (report.textChanges.length === 0) {
+        md += `No text modifications identified.\n\n`;
+      } else {
+        report.textChanges.forEach((change, idx) => {
+          md += `### Page ${change.page} • Change #${idx + 1} (${getSeverityLabel(change.severity)} Severity)\n`;
+          md += `**Description:** ${change.description}\n\n`;
+          if (change.type !== 'added') {
+            md += `* **Original Text:** ${change.originalText || ''}\n`;
+          }
+          if (change.type !== 'deleted') {
+            md += `* **Revised Text:** ${change.revisedText || ''}\n`;
+          }
+          if (change.recommendation) {
+            md += `* **💡 Context & Recommendation:** ${change.recommendation}\n`;
+          }
+          md += `\n`;
+        });
+      }
+    }
+
+    if (includeTableChanges) {
+      md += `## 3. Table Modifications\n\n`;
+      if (report.tableChanges.length === 0) {
+        md += `No table modifications identified.\n\n`;
+      } else {
+        report.tableChanges.forEach((change) => {
+          md += `### Page ${change.page} • ${change.tableName} (${getSeverityLabel(change.severity)} Severity)\n`;
+          md += `**Description:** ${change.description}\n\n`;
+          if (change.originalText) {
+            md += `* **Original Table Entry:** ${change.originalText}\n`;
+          }
+          if (change.revisedText) {
+            md += `* **Revised Table Entry:** ${change.revisedText}\n`;
+          }
+          if (change.recommendation) {
+            md += `* **💡 Context & Recommendation:** ${change.recommendation}\n`;
+          }
+          md += `\n`;
+        });
+      }
+    }
+
+    if (includeVisualChanges) {
+      md += `## 4. Visual & Layout Modifications\n\n`;
+      if (report.visualChanges.length === 0) {
+        md += `No visual modifications identified.\n\n`;
+      } else {
+        report.visualChanges.forEach((change) => {
+          md += `### Page ${change.page} • ${change.type.replace('_', ' ').toUpperCase()} (${getSeverityLabel(change.severity)} Severity)\n`;
+          md += `**Description:** ${change.description}\n\n`;
+          if (change.originalText) {
+            md += `* **Original Visual Layout:** ${change.originalText}\n`;
+          }
+          if (change.revisedText) {
+            md += `* **Revised Visual Layout:** ${change.revisedText}\n`;
+          }
+          if (change.recommendation) {
+            md += `* **💡 Context & Recommendation:** ${change.recommendation}\n`;
+          }
+          md += `\n`;
+        });
+      }
+    }
+
+    if (auditNotes.trim()) {
+      md += `---\n\n`;
+      md += `## 5. Compliance Notes & Audit Sign-Off\n`;
+      md += `*${auditNotes}*\n\n`;
+      md += `**Auditor Signature:** ___________________________ (Lead Auditor: ${auditorName})\n\n`;
+      md += `**Sign-off Date:** ${auditDate}\n`;
+    }
+
+    return md;
+  };
+
+  const copyMarkdownReport = () => {
+    const md = generateMarkdownReport();
+    if (!md) return;
+    navigator.clipboard.writeText(md).then(() => {
+      setIsCopiedMd(true);
+      setTimeout(() => setIsCopiedMd(false), 3000);
+    });
+  };
+
+  const downloadMarkdownReport = () => {
+    const md = generateMarkdownReport();
+    if (!md) return;
+    const blob = new Blob([md], { type: 'text/markdown' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${publisherTitle.replace(/\s+/g, '_')}_Audit_Report.md`;
+    a.click();
+    URL.revokeObjectURL(url);
   };
 
   return (
@@ -1538,12 +1683,12 @@ export default function App() {
               </div>
 
               {/* Core Content Area */}
-              <div style={{ position: 'relative', minHeight: '400px' }}>
+              <div style={{ position: 'relative', minHeight: isLoading ? '600px' : '400px' }}>
                 
                 {/* 1. Loading Panel */}
                 {isLoading && (
                   <div style={{ position: 'absolute', inset: 0, background: 'rgba(255, 255, 255, 0.96)', backdropFilter: 'blur(8px)', zIndex: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px', borderRadius: 'var(--border-radius)' }}>
-                    <div style={{ maxWidth: '860px', width: '100%', display: 'grid', gridTemplateColumns: '1fr 1.2fr', gap: '32px', alignItems: 'start' }}>
+                    <div style={{ maxWidth: '1500px', width: '95%', display: 'grid', gridTemplateColumns: '320px 1fr', gap: '32px', alignItems: 'start' }}>
                       
                       {/* Left: Progress stepper */}
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
@@ -1600,7 +1745,7 @@ export default function App() {
                             border: '1px solid #cbd5e1', 
                             padding: '16px', 
                             borderRadius: '6px', 
-                            height: '320px', 
+                            height: '450px', 
                             overflowY: 'auto', 
                             boxShadow: 'inset 0 2px 8px rgba(0,0,0,0.05)',
                             display: 'flex',
@@ -1803,6 +1948,12 @@ export default function App() {
                                     )}
                                   </div>
                                 </div>
+                                {change.recommendation && (
+                                  <div style={{ marginTop: '12px', padding: '10px 14px', background: 'rgba(0, 126, 158, 0.04)', border: '1px solid rgba(0, 126, 158, 0.15)', borderRadius: '6px', textAlign: 'left' }}>
+                                    <div style={{ fontSize: '10px', fontWeight: 700, color: '#007E9E', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '4px' }}>💡 Context & Recommendation</div>
+                                    <p style={{ fontSize: '12px', color: '#334155', margin: 0, lineHeight: 1.4 }}>{change.recommendation}</p>
+                                  </div>
+                                )}
                               </div>
                             ))
                           )}
@@ -1863,6 +2014,12 @@ export default function App() {
                                     )}
                                   </div>
                                 </div>
+                                {change.recommendation && (
+                                  <div style={{ marginTop: '12px', padding: '10px 14px', background: 'rgba(0, 126, 158, 0.04)', border: '1px solid rgba(0, 126, 158, 0.15)', borderRadius: '6px', textAlign: 'left' }}>
+                                    <div style={{ fontSize: '10px', fontWeight: 700, color: '#007E9E', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '4px' }}>💡 Context & Recommendation</div>
+                                    <p style={{ fontSize: '12px', color: '#334155', margin: 0, lineHeight: 1.4 }}>{change.recommendation}</p>
+                                  </div>
+                                )}
                               </div>
                             ))
                           )}
@@ -1920,6 +2077,12 @@ export default function App() {
                                     )}
                                   </div>
                                 </div>
+                                {change.recommendation && (
+                                  <div style={{ marginTop: '12px', padding: '10px 14px', background: 'rgba(0, 126, 158, 0.04)', border: '1px solid rgba(0, 126, 158, 0.15)', borderRadius: '6px', textAlign: 'left' }}>
+                                    <div style={{ fontSize: '10px', fontWeight: 700, color: '#007E9E', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '4px' }}>💡 Context & Recommendation</div>
+                                    <p style={{ fontSize: '12px', color: '#334155', margin: 0, lineHeight: 1.4 }}>{change.recommendation}</p>
+                                  </div>
+                                )}
                               </div>
                             ))
                           )}
@@ -2046,14 +2209,76 @@ export default function App() {
                       className="btn-secondary" 
                       style={{ width: '100%', justifyContent: 'center', padding: '10px 0', fontSize: '13px', borderColor: '#007E9E', color: '#007E9E' }}
                     >
-                      {isCopied ? "✓ Copied to Clipboard!" : "📋 Copy HTML Report"}
+                      {isCopied ? "✓ Copied HTML!" : "📋 Copy HTML Report"}
+                    </button>
+
+                    <button 
+                      onClick={copyMarkdownReport} 
+                      className="btn-secondary" 
+                      style={{ width: '100%', justifyContent: 'center', padding: '10px 0', fontSize: '13px', borderColor: '#21874c', color: '#21874c' }}
+                    >
+                      {isCopiedMd ? "✓ Copied Markdown!" : "📋 Copy Markdown"}
+                    </button>
+
+                    <button 
+                      onClick={downloadMarkdownReport} 
+                      className="btn-secondary" 
+                      style={{ width: '100%', justifyContent: 'center', padding: '10px 0', fontSize: '13px', borderColor: '#475569', color: '#475569' }}
+                    >
+                      📥 Download Markdown
                     </button>
                   </div>
                 </div>
 
-                {/* Right Column: Paper Document Preview */}
-                <div className="report-preview-container">
-                  <div className="report-paper-page" id="printable-report">
+                {/* Right Column: Paper/Markdown Document Preview */}
+                <div className="report-preview-container" style={{ display: 'flex', flexDirection: 'column', gap: '16px', alignItems: 'center' }}>
+                  
+                  {/* View Mode Switcher Tab Bar */}
+                  <div className="no-print" style={{ display: 'flex', gap: '8px', background: 'rgba(255, 255, 255, 0.8)', backdropFilter: 'blur(4px)', padding: '4px', borderRadius: '8px', border: '1px solid #cbd5e1', alignSelf: 'flex-start', marginLeft: 'auto', marginRight: 'auto' }}>
+                    <button 
+                      onClick={() => setPublisherViewMode('html')}
+                      style={{
+                        padding: '6px 16px',
+                        borderRadius: '6px',
+                        border: 'none',
+                        fontSize: '12px',
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                        background: publisherViewMode === 'html' ? '#015294' : 'transparent',
+                        color: publisherViewMode === 'html' ? '#ffffff' : '#64748b',
+                        boxShadow: publisherViewMode === 'html' ? '0 1px 3px rgba(0,0,0,0.15)' : 'none',
+                        transition: 'all 0.2s',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px'
+                      }}
+                    >
+                      📄 HTML Print Preview
+                    </button>
+                    <button 
+                      onClick={() => setPublisherViewMode('markdown')}
+                      style={{
+                        padding: '6px 16px',
+                        borderRadius: '6px',
+                        border: 'none',
+                        fontSize: '12px',
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                        background: publisherViewMode === 'markdown' ? '#015294' : 'transparent',
+                        color: publisherViewMode === 'markdown' ? '#ffffff' : '#64748b',
+                        boxShadow: publisherViewMode === 'markdown' ? '0 1px 3px rgba(0,0,0,0.15)' : 'none',
+                        transition: 'all 0.2s',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px'
+                      }}
+                    >
+                      📝 Markdown View
+                    </button>
+                  </div>
+
+                  {/* HTML Report Sheet (always rendered, hidden on screen if in markdown mode) */}
+                  <div className={`report-paper-page ${publisherViewMode === 'html' ? '' : 'hidden-screen'}`} id="printable-report">
                     
                     {/* Header */}
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '2px solid #002A5D', paddingBottom: '16px' }}>
@@ -2148,7 +2373,7 @@ export default function App() {
 
                                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginTop: '4px' }}>
                                   {/* Original */}
-                                  <div style={{ background: change.type === 'added' ? 'transparent' : '#fef2f2', border: change.type === 'added' ? '1px dashed #cbd5e1' : '1px solid #fee2e2', padding: '8px', borderRadius: '4px' }}>
+                                  <div className={change.type === 'added' ? '' : 'print-diff-box-removed'} style={{ background: change.type === 'added' ? 'transparent' : '#fef2f2', border: change.type === 'added' ? '1px dashed #cbd5e1' : '1px solid #fee2e2', padding: '8px', borderRadius: '4px' }}>
                                     <div style={{ fontSize: '8.5px', fontWeight: 700, color: change.type === 'added' ? '#64748b' : '#ef4444', textTransform: 'uppercase', marginBottom: '4px' }}>Original</div>
                                     {change.type === 'added' ? (
                                       <span style={{ fontSize: '11px', color: '#94a3b8', fontStyle: 'italic' }}>[No text existed]</span>
@@ -2157,7 +2382,7 @@ export default function App() {
                                     )}
                                   </div>
                                   {/* Revised */}
-                                  <div style={{ background: change.type === 'deleted' ? 'transparent' : '#f0fdf4', border: change.type === 'deleted' ? '1px dashed #cbd5e1' : '1px solid #dcfce7', padding: '8px', borderRadius: '4px' }}>
+                                  <div className={change.type === 'deleted' ? '' : 'print-diff-box-added'} style={{ background: change.type === 'deleted' ? 'transparent' : '#f0fdf4', border: change.type === 'deleted' ? '1px dashed #cbd5e1' : '1px solid #dcfce7', padding: '8px', borderRadius: '4px' }}>
                                     <div style={{ fontSize: '8.5px', fontWeight: 700, color: change.type === 'deleted' ? '#64748b' : '#21874c', textTransform: 'uppercase', marginBottom: '4px' }}>Revised</div>
                                     {change.type === 'deleted' ? (
                                       <span style={{ fontSize: '11px', color: '#94a3b8', fontStyle: 'italic' }}>[Clause deleted]</span>
@@ -2166,6 +2391,11 @@ export default function App() {
                                     )}
                                   </div>
                                 </div>
+                                {change.recommendation && (
+                                  <div style={{ marginTop: '8px', padding: '6px 10px', background: '#f8fafc', borderLeft: '3px solid #007E9E', fontSize: '11.5px', color: '#4b5563', fontStyle: 'italic' }}>
+                                    <strong>Recommendation:</strong> {change.recommendation}
+                                  </div>
+                                )}
                               </div>
                             ))}
                           </div>
@@ -2194,7 +2424,7 @@ export default function App() {
 
                                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginTop: '4px' }}>
                                   {/* Original */}
-                                  <div style={{ background: !change.originalText ? 'transparent' : '#fef2f2', border: !change.originalText ? '1px dashed #cbd5e1' : '1px solid #fee2e2', padding: '8px', borderRadius: '4px' }}>
+                                  <div className={!change.originalText ? '' : 'print-diff-box-removed'} style={{ background: !change.originalText ? 'transparent' : '#fef2f2', border: !change.originalText ? '1px dashed #cbd5e1' : '1px solid #fee2e2', padding: '8px', borderRadius: '4px' }}>
                                     <div style={{ fontSize: '8.5px', fontWeight: 700, color: !change.originalText ? '#64748b' : '#ef4444', textTransform: 'uppercase', marginBottom: '4px' }}>Original</div>
                                     {!change.originalText ? (
                                       <span style={{ fontSize: '11px', color: '#94a3b8', fontStyle: 'italic' }}>[No row/cell existed]</span>
@@ -2203,7 +2433,7 @@ export default function App() {
                                     )}
                                   </div>
                                   {/* Revised */}
-                                  <div style={{ background: !change.revisedText ? 'transparent' : '#f0fdf4', border: !change.revisedText ? '1px dashed #cbd5e1' : '1px solid #dcfce7', padding: '8px', borderRadius: '4px' }}>
+                                  <div className={!change.revisedText ? '' : 'print-diff-box-added'} style={{ background: !change.revisedText ? 'transparent' : '#f0fdf4', border: !change.revisedText ? '1px dashed #cbd5e1' : '1px solid #dcfce7', padding: '8px', borderRadius: '4px' }}>
                                     <div style={{ fontSize: '8.5px', fontWeight: 700, color: !change.revisedText ? '#64748b' : '#21874c', textTransform: 'uppercase', marginBottom: '4px' }}>Revised</div>
                                     {!change.revisedText ? (
                                       <span style={{ fontSize: '11px', color: '#94a3b8', fontStyle: 'italic' }}>[Row/cell deleted]</span>
@@ -2212,6 +2442,11 @@ export default function App() {
                                     )}
                                   </div>
                                 </div>
+                                {change.recommendation && (
+                                  <div style={{ marginTop: '8px', padding: '6px 10px', background: '#f8fafc', borderLeft: '3px solid #007E9E', fontSize: '11.5px', color: '#4b5563', fontStyle: 'italic' }}>
+                                    <strong>Recommendation:</strong> {change.recommendation}
+                                  </div>
+                                )}
                               </div>
                             ))}
                           </div>
@@ -2240,7 +2475,7 @@ export default function App() {
 
                                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginTop: '4px' }}>
                                   {/* Original */}
-                                  <div style={{ background: !change.originalText ? 'transparent' : '#fef2f2', border: !change.originalText ? '1px dashed #cbd5e1' : '1px solid #fee2e2', padding: '8px', borderRadius: '4px' }}>
+                                  <div className={!change.originalText ? '' : 'print-diff-box-removed'} style={{ background: !change.originalText ? 'transparent' : '#fef2f2', border: !change.originalText ? '1px dashed #cbd5e1' : '1px solid #fee2e2', padding: '8px', borderRadius: '4px' }}>
                                     <div style={{ fontSize: '8.5px', fontWeight: 700, color: !change.originalText ? '#64748b' : '#ef4444', textTransform: 'uppercase', marginBottom: '4px' }}>Original</div>
                                     {!change.originalText ? (
                                       <span style={{ fontSize: '11px', color: '#94a3b8', fontStyle: 'italic' }}>[No visual element existed]</span>
@@ -2249,7 +2484,7 @@ export default function App() {
                                     )}
                                   </div>
                                   {/* Revised */}
-                                  <div style={{ background: !change.revisedText ? 'transparent' : '#f0fdf4', border: !change.revisedText ? '1px dashed #cbd5e1' : '1px solid #dcfce7', padding: '8px', borderRadius: '4px' }}>
+                                  <div className={!change.revisedText ? '' : 'print-diff-box-added'} style={{ background: !change.revisedText ? 'transparent' : '#f0fdf4', border: !change.revisedText ? '1px dashed #cbd5e1' : '1px solid #dcfce7', padding: '8px', borderRadius: '4px' }}>
                                     <div style={{ fontSize: '8.5px', fontWeight: 700, color: !change.revisedText ? '#64748b' : '#21874c', textTransform: 'uppercase', marginBottom: '4px' }}>Revised</div>
                                     {!change.revisedText ? (
                                       <span style={{ fontSize: '11px', color: '#94a3b8', fontStyle: 'italic' }}>[Visual element deleted]</span>
@@ -2258,6 +2493,11 @@ export default function App() {
                                     )}
                                   </div>
                                 </div>
+                                {change.recommendation && (
+                                  <div style={{ marginTop: '8px', padding: '6px 10px', background: '#f8fafc', borderLeft: '3px solid #007E9E', fontSize: '11.5px', color: '#4b5563', fontStyle: 'italic' }}>
+                                    <strong>Recommendation:</strong> {change.recommendation}
+                                  </div>
+                                )}
                               </div>
                             ))}
                           </div>
@@ -2289,6 +2529,73 @@ export default function App() {
                     )}
 
                   </div>
+
+                  {/* Markdown Report Sheet (always rendered, hidden on screen if in html mode, never printed) */}
+                  <div 
+                    className={`report-paper-page markdown-preview-block ${publisherViewMode === 'markdown' ? '' : 'hidden-screen'}`}
+                    style={{ background: '#0f172a', border: '1px solid #1e293b', borderRadius: '6px', boxShadow: '0 8px 30px rgba(0, 0, 0, 0.15)', padding: '30px 40px', width: '100%', maxWidth: '800px', display: 'flex', flexDirection: 'column', gap: '16px' }}
+                  >
+                    <div className="no-print" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #334155', paddingBottom: '12px' }}>
+                      <span style={{ fontSize: '12px', color: '#94a3b8', fontFamily: 'monospace', fontWeight: 600 }}>{publisherTitle.toLowerCase().replace(/\s+/g, '_')}_audit_report.md</span>
+                      <div style={{ display: 'flex', gap: '8px' }}>
+                        <button 
+                          onClick={copyMarkdownReport}
+                          style={{
+                            background: 'rgba(255, 255, 255, 0.1)',
+                            border: '1px solid rgba(255, 255, 255, 0.2)',
+                            color: '#fff',
+                            padding: '5px 12px',
+                            borderRadius: '4px',
+                            fontSize: '11px',
+                            fontWeight: 600,
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '6px',
+                            transition: 'all 0.2s'
+                          }}
+                          onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255, 255, 255, 0.15)'; }}
+                          onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)'; }}
+                        >
+                          {isCopiedMd ? "✓ Copied!" : "📋 Copy"}
+                        </button>
+                        <button 
+                          onClick={downloadMarkdownReport}
+                          style={{
+                            background: 'rgba(255, 255, 255, 0.1)',
+                            border: '1px solid rgba(255, 255, 255, 0.2)',
+                            color: '#fff',
+                            padding: '5px 12px',
+                            borderRadius: '4px',
+                            fontSize: '11px',
+                            fontWeight: 600,
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '6px',
+                            transition: 'all 0.2s'
+                          }}
+                          onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255, 255, 255, 0.15)'; }}
+                          onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)'; }}
+                        >
+                          📥 Download
+                        </button>
+                      </div>
+                    </div>
+                    <pre style={{ 
+                      margin: 0, 
+                      whiteSpace: 'pre-wrap', 
+                      wordBreak: 'break-all', 
+                      fontFamily: 'Consolas, Monaco, "Courier New", monospace', 
+                      fontSize: '13px', 
+                      lineHeight: '1.6', 
+                      color: '#cbd5e1',
+                      textAlign: 'left'
+                    }}>
+                      {generateMarkdownReport()}
+                    </pre>
+                  </div>
+
                 </div>
 
               </div>
