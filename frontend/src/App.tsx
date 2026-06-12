@@ -32,7 +32,7 @@ interface TextChange {
   originalText?: string;
   revisedText?: string;
   severity: 'low' | 'medium' | 'high';
-  recommendation?: string;
+  potentialImpact?: string;
 }
 
 interface TableChange {
@@ -43,7 +43,7 @@ interface TableChange {
   originalText?: string;
   revisedText?: string;
   severity: 'low' | 'medium' | 'high';
-  recommendation?: string;
+  potentialImpact?: string;
 }
 
 interface VisualChange {
@@ -53,7 +53,7 @@ interface VisualChange {
   originalText?: string;
   revisedText?: string;
   severity: 'low' | 'medium' | 'high';
-  recommendation?: string;
+  potentialImpact?: string;
 }
 
 interface ComparisonReport {
@@ -204,7 +204,7 @@ const mockReport: ComparisonReport = {
       originalText: "$2,000.00 (Two Thousand Dollars)",
       revisedText: "$2,300.00 (Two Thousand Three Hundred Dollars)",
       severity: "high",
-      recommendation: "Increases the initial cash requirement for the tenant by 15%. Verify if this aligns with local statutory caps on security deposits."
+      potentialImpact: "Increases the initial cash requirement for the tenant by 15%. Verify if this aligns with local statutory caps on security deposits."
     },
     {
       page: "2",
@@ -213,7 +213,7 @@ const mockReport: ComparisonReport = {
       originalText: "Late fees will apply if rent is unpaid by the 5th day of the month.",
       revisedText: "Late fees will apply if rent is unpaid by the 3rd day of the month.",
       severity: "medium",
-      recommendation: "Accelerates late fee triggers. Recommend adjusting automated payroll/accounts payable schedules to avoid late fee penalties."
+      potentialImpact: "Accelerates late fee triggers. Recommend adjusting automated payroll/accounts payable schedules to avoid late fee penalties."
     },
     {
       page: "5",
@@ -222,7 +222,7 @@ const mockReport: ComparisonReport = {
       originalText: "Tenant is permitted to keep one domestic cat under 15 lbs on the premises.",
       revisedText: "",
       severity: "medium",
-      recommendation: "Removes explicit permission to harbor pets. Confirm if the current tenant occupies the space with a pet to avoid immediate lease default."
+      potentialImpact: "Removes explicit permission to harbor pets. Confirm if the current tenant occupies the space with a pet to avoid immediate lease default."
     },
     {
       page: "6",
@@ -231,7 +231,7 @@ const mockReport: ComparisonReport = {
       originalText: "",
       revisedText: "Tenant agrees to indemnify landlord for any claims arising from parking space usage.",
       severity: "low",
-      recommendation: "Shifts liability for parking space damage onto the tenant. Confirm tenant's commercial general liability insurance covers parking structure incidents."
+      potentialImpact: "Shifts liability for parking space damage onto the tenant. Confirm tenant's commercial general liability insurance covers parking structure incidents."
     }
   ],
   tableChanges: [
@@ -243,7 +243,7 @@ const mockReport: ComparisonReport = {
       originalText: "Electricity: [x] Landlord  [ ] Tenant",
       revisedText: "Electricity: [ ] Landlord  [x] Tenant",
       severity: "high",
-      recommendation: "Shifts operational utility costs directly to the tenant, increasing overall monthly occupancy expenses. Adjust operational budgets accordingly."
+      potentialImpact: "Shifts operational utility costs directly to the tenant, increasing overall monthly occupancy expenses. Adjust operational budgets accordingly."
     },
     {
       page: "3",
@@ -253,7 +253,7 @@ const mockReport: ComparisonReport = {
       originalText: "",
       revisedText: "+ Fiber Internet | Flat Fee | $50.00/mo | Tenant",
       severity: "medium",
-      recommendation: "Introduces a mandatory flat monthly fee. Check if the internet speed aligns with business-class requirements before signing."
+      potentialImpact: "Introduces a mandatory flat monthly fee. Check if the internet speed aligns with business-class requirements before signing."
     }
   ],
   visualChanges: [
@@ -264,7 +264,7 @@ const mockReport: ComparisonReport = {
       originalText: "Image Logo: 'Apex Holdings' with blue triangle symbol.",
       revisedText: "Image Logo: 'Aegis Property Management' with clean minimalist shield emblem.",
       severity: "low",
-      recommendation: "Indicates corporate branding or manager transition. Update notice dispatch addresses and invoicing systems to reflect the new management group."
+      potentialImpact: "Indicates corporate branding or manager transition. Update notice dispatch addresses and invoicing systems to reflect the new management group."
     },
     {
       page: "4",
@@ -273,9 +273,85 @@ const mockReport: ComparisonReport = {
       originalText: "Signature blocks printed on separate Page 5 lease rider.",
       revisedText: "Signature blocks condensed and shifted to bottom of Page 4.",
       severity: "low",
-      recommendation: "Purely structural layout optimization to save space. No legal risk identified, but verify all signatures land on the final execution page."
+      potentialImpact: "Purely structural layout optimization to save space. No legal risk identified, but verify all signatures land on the final execution page."
     }
   ]
+};
+
+const parseInlineMarkdown = (text: string) => {
+  const tokenRegex = /(\*\*.*?\*\*|\*.*?\*)/g;
+  const rawParts = text.split(tokenRegex);
+  
+  return rawParts.map((part, index) => {
+    if (part.startsWith('**') && part.endsWith('**')) {
+      return <strong key={index} style={{ color: '#0f172a', fontWeight: 700 }}>{part.slice(2, -2)}</strong>;
+    }
+    if (part.startsWith('*') && part.endsWith('*')) {
+      return <em key={index} style={{ fontStyle: 'italic', color: '#4b5563' }}>{part.slice(1, -1)}</em>;
+    }
+    return part;
+  });
+};
+
+const renderMarkdownAsHtml = (md: string) => {
+  if (!md) return null;
+  
+  const lines = md.split('\n');
+  return (
+    <div style={{ fontFamily: "'Plus Jakarta Sans', system-ui, -apple-system, sans-serif", color: '#334155', lineHeight: '1.7', fontSize: '13.5px', textAlign: 'left' }}>
+      {lines.map((line, idx) => {
+        const trimmed = line.trim();
+        
+        // Horizontal Rule
+        if (trimmed === '---') {
+          return <hr key={idx} style={{ border: 'none', borderTop: '2px solid #cbd5e1', margin: '20px 0' }} />;
+        }
+        
+        // H1
+        if (trimmed.startsWith('# ')) {
+          return <h1 key={idx} style={{ fontSize: '24px', color: '#002A5D', fontWeight: 800, margin: '24px 0 12px', borderBottom: '2px solid #002A5D', paddingBottom: '8px', fontFamily: "'Raleway', sans-serif" }}>{trimmed.slice(2)}</h1>;
+        }
+        
+        // H2
+        if (trimmed.startsWith('## ')) {
+          return <h2 key={idx} style={{ fontSize: '16px', color: '#002A5D', fontWeight: 700, margin: '20px 0 10px', borderBottom: '1px solid #cbd5e1', paddingBottom: '4px', fontFamily: "'Raleway', sans-serif" }}>{trimmed.slice(3)}</h2>;
+        }
+        
+        // H3
+        if (trimmed.startsWith('### ')) {
+          const content = trimmed.slice(4);
+          return (
+            <h3 key={idx} style={{ fontSize: '13px', color: '#475569', fontWeight: 700, margin: '16px 0 8px' }}>
+              {parseInlineMarkdown(content)}
+            </h3>
+          );
+        }
+        
+        // List Item
+        if (trimmed.startsWith('* ') || trimmed.startsWith('- ')) {
+          const content = trimmed.slice(2);
+          return (
+            <div key={idx} style={{ paddingLeft: '20px', textIndent: '-20px', margin: '8px 0', color: '#334155' }}>
+              <span style={{ color: '#007E9E', marginRight: '8px', fontWeight: 'bold' }}>•</span>
+              {parseInlineMarkdown(content)}
+            </div>
+          );
+        }
+        
+        // Empty Line
+        if (!trimmed) {
+          return <div key={idx} style={{ height: '8px' }} />;
+        }
+        
+        // Regular Paragraph
+        return (
+          <p key={idx} style={{ margin: '0 0 10px 0', color: '#334155' }}>
+            {parseInlineMarkdown(line)}
+          </p>
+        );
+      })}
+    </div>
+  );
 };
 
 export default function App() {
@@ -921,9 +997,9 @@ export default function App() {
                   </td>
                 </tr>
               </table>
-              ${change.recommendation ? `
+              ${change.potentialImpact ? `
                 <div style="margin-top: 10px; padding: 8px 12px; background-color: #f8fafc; border-left: 3px solid #007E9E; font-size: 12px; color: #475569;">
-                  <strong>💡 Context & Recommendation:</strong> ${escapeHtml(change.recommendation)}
+                  <strong>💡 Context & Potential Impact:</strong> ${escapeHtml(change.potentialImpact)}
                 </div>
               ` : ''}
             </div>
@@ -961,9 +1037,9 @@ export default function App() {
                   </td>
                 </tr>
               </table>
-              ${change.recommendation ? `
+              ${change.potentialImpact ? `
                 <div style="margin-top: 10px; padding: 8px 12px; background-color: #f8fafc; border-left: 3px solid #007E9E; font-size: 12px; color: #475569;">
-                  <strong>💡 Context & Recommendation:</strong> ${escapeHtml(change.recommendation)}
+                  <strong>💡 Context & Potential Impact:</strong> ${escapeHtml(change.potentialImpact)}
                 </div>
               ` : ''}
             </div>
@@ -1001,9 +1077,9 @@ export default function App() {
                   </td>
                 </tr>
               </table>
-              ${change.recommendation ? `
+              ${change.potentialImpact ? `
                 <div style="margin-top: 10px; padding: 8px 12px; background-color: #f8fafc; border-left: 3px solid #007E9E; font-size: 12px; color: #475569;">
-                  <strong>💡 Context & Recommendation:</strong> ${escapeHtml(change.recommendation)}
+                  <strong>💡 Context & Potential Impact:</strong> ${escapeHtml(change.potentialImpact)}
                 </div>
               ` : ''}
             </div>
@@ -1091,8 +1167,8 @@ export default function App() {
           if (change.type !== 'deleted') {
             md += `* **Revised Text:** ${change.revisedText || ''}\n`;
           }
-          if (change.recommendation) {
-            md += `* **💡 Context & Recommendation:** ${change.recommendation}\n`;
+          if (change.potentialImpact) {
+            md += `* **💡 Context & Potential Impact:** ${change.potentialImpact}\n`;
           }
           md += `\n`;
         });
@@ -1113,8 +1189,8 @@ export default function App() {
           if (change.revisedText) {
             md += `* **Revised Table Entry:** ${change.revisedText}\n`;
           }
-          if (change.recommendation) {
-            md += `* **💡 Context & Recommendation:** ${change.recommendation}\n`;
+          if (change.potentialImpact) {
+            md += `* **💡 Context & Potential Impact:** ${change.potentialImpact}\n`;
           }
           md += `\n`;
         });
@@ -1135,8 +1211,8 @@ export default function App() {
           if (change.revisedText) {
             md += `* **Revised Visual Layout:** ${change.revisedText}\n`;
           }
-          if (change.recommendation) {
-            md += `* **💡 Context & Recommendation:** ${change.recommendation}\n`;
+          if (change.potentialImpact) {
+            md += `* **💡 Context & Potential Impact:** ${change.potentialImpact}\n`;
           }
           md += `\n`;
         });
@@ -1948,10 +2024,10 @@ export default function App() {
                                     )}
                                   </div>
                                 </div>
-                                {change.recommendation && (
+                                {change.potentialImpact && (
                                   <div style={{ marginTop: '12px', padding: '10px 14px', background: 'rgba(0, 126, 158, 0.04)', border: '1px solid rgba(0, 126, 158, 0.15)', borderRadius: '6px', textAlign: 'left' }}>
-                                    <div style={{ fontSize: '10px', fontWeight: 700, color: '#007E9E', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '4px' }}>💡 Context & Recommendation</div>
-                                    <p style={{ fontSize: '12px', color: '#334155', margin: 0, lineHeight: 1.4 }}>{change.recommendation}</p>
+                                    <div style={{ fontSize: '10px', fontWeight: 700, color: '#007E9E', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '4px' }}>💡 Context & Potential Impact</div>
+                                    <p style={{ fontSize: '12px', color: '#334155', margin: 0, lineHeight: 1.4 }}>{change.potentialImpact}</p>
                                   </div>
                                 )}
                               </div>
@@ -2014,10 +2090,10 @@ export default function App() {
                                     )}
                                   </div>
                                 </div>
-                                {change.recommendation && (
+                                {change.potentialImpact && (
                                   <div style={{ marginTop: '12px', padding: '10px 14px', background: 'rgba(0, 126, 158, 0.04)', border: '1px solid rgba(0, 126, 158, 0.15)', borderRadius: '6px', textAlign: 'left' }}>
-                                    <div style={{ fontSize: '10px', fontWeight: 700, color: '#007E9E', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '4px' }}>💡 Context & Recommendation</div>
-                                    <p style={{ fontSize: '12px', color: '#334155', margin: 0, lineHeight: 1.4 }}>{change.recommendation}</p>
+                                    <div style={{ fontSize: '10px', fontWeight: 700, color: '#007E9E', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '4px' }}>💡 Context & Potential Impact</div>
+                                    <p style={{ fontSize: '12px', color: '#334155', margin: 0, lineHeight: 1.4 }}>{change.potentialImpact}</p>
                                   </div>
                                 )}
                               </div>
@@ -2077,10 +2153,10 @@ export default function App() {
                                     )}
                                   </div>
                                 </div>
-                                {change.recommendation && (
+                                {change.potentialImpact && (
                                   <div style={{ marginTop: '12px', padding: '10px 14px', background: 'rgba(0, 126, 158, 0.04)', border: '1px solid rgba(0, 126, 158, 0.15)', borderRadius: '6px', textAlign: 'left' }}>
-                                    <div style={{ fontSize: '10px', fontWeight: 700, color: '#007E9E', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '4px' }}>💡 Context & Recommendation</div>
-                                    <p style={{ fontSize: '12px', color: '#334155', margin: 0, lineHeight: 1.4 }}>{change.recommendation}</p>
+                                    <div style={{ fontSize: '10px', fontWeight: 700, color: '#007E9E', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '4px' }}>💡 Context & Potential Impact</div>
+                                    <p style={{ fontSize: '12px', color: '#334155', margin: 0, lineHeight: 1.4 }}>{change.potentialImpact}</p>
                                   </div>
                                 )}
                               </div>
@@ -2391,9 +2467,9 @@ export default function App() {
                                     )}
                                   </div>
                                 </div>
-                                {change.recommendation && (
+                                {change.potentialImpact && (
                                   <div style={{ marginTop: '8px', padding: '6px 10px', background: '#f8fafc', borderLeft: '3px solid #007E9E', fontSize: '11.5px', color: '#4b5563', fontStyle: 'italic' }}>
-                                    <strong>Recommendation:</strong> {change.recommendation}
+                                    <strong>Potential Impact:</strong> {change.potentialImpact}
                                   </div>
                                 )}
                               </div>
@@ -2442,9 +2518,9 @@ export default function App() {
                                     )}
                                   </div>
                                 </div>
-                                {change.recommendation && (
+                                {change.potentialImpact && (
                                   <div style={{ marginTop: '8px', padding: '6px 10px', background: '#f8fafc', borderLeft: '3px solid #007E9E', fontSize: '11.5px', color: '#4b5563', fontStyle: 'italic' }}>
-                                    <strong>Recommendation:</strong> {change.recommendation}
+                                    <strong>Potential Impact:</strong> {change.potentialImpact}
                                   </div>
                                 )}
                               </div>
@@ -2493,9 +2569,9 @@ export default function App() {
                                     )}
                                   </div>
                                 </div>
-                                {change.recommendation && (
+                                {change.potentialImpact && (
                                   <div style={{ marginTop: '8px', padding: '6px 10px', background: '#f8fafc', borderLeft: '3px solid #007E9E', fontSize: '11.5px', color: '#4b5563', fontStyle: 'italic' }}>
-                                    <strong>Recommendation:</strong> {change.recommendation}
+                                    <strong>Potential Impact:</strong> {change.potentialImpact}
                                   </div>
                                 )}
                               </div>
@@ -2533,17 +2609,17 @@ export default function App() {
                   {/* Markdown Report Sheet (always rendered, hidden on screen if in html mode, never printed) */}
                   <div 
                     className={`report-paper-page markdown-preview-block ${publisherViewMode === 'markdown' ? '' : 'hidden-screen'}`}
-                    style={{ background: '#0f172a', border: '1px solid #1e293b', borderRadius: '6px', boxShadow: '0 8px 30px rgba(0, 0, 0, 0.15)', padding: '30px 40px', width: '100%', maxWidth: '800px', display: 'flex', flexDirection: 'column', gap: '16px' }}
+                    style={{ background: '#ffffff', border: '1px solid #cbd5e1', borderRadius: '4px', boxShadow: '0 8px 30px rgba(0, 0, 0, 0.08)', padding: '40px 50px', width: '100%', maxWidth: '800px', display: 'flex', flexDirection: 'column', gap: '16px' }}
                   >
-                    <div className="no-print" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #334155', paddingBottom: '12px' }}>
-                      <span style={{ fontSize: '12px', color: '#94a3b8', fontFamily: 'monospace', fontWeight: 600 }}>{publisherTitle.toLowerCase().replace(/\s+/g, '_')}_audit_report.md</span>
+                    <div className="no-print" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #e2e8f0', paddingBottom: '12px', marginBottom: '8px' }}>
+                      <span style={{ fontSize: '11px', color: '#64748b', fontFamily: 'monospace', fontWeight: 600 }}>{publisherTitle.toLowerCase().replace(/\s+/g, '_')}_audit_report.md</span>
                       <div style={{ display: 'flex', gap: '8px' }}>
                         <button 
                           onClick={copyMarkdownReport}
                           style={{
-                            background: 'rgba(255, 255, 255, 0.1)',
-                            border: '1px solid rgba(255, 255, 255, 0.2)',
-                            color: '#fff',
+                            background: '#f1f5f9',
+                            border: '1px solid #cbd5e1',
+                            color: '#334155',
                             padding: '5px 12px',
                             borderRadius: '4px',
                             fontSize: '11px',
@@ -2554,17 +2630,15 @@ export default function App() {
                             gap: '6px',
                             transition: 'all 0.2s'
                           }}
-                          onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255, 255, 255, 0.15)'; }}
-                          onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)'; }}
                         >
-                          {isCopiedMd ? "✓ Copied!" : "📋 Copy"}
+                          {isCopiedMd ? "✓ Copied!" : "📋 Copy Raw Markdown"}
                         </button>
                         <button 
                           onClick={downloadMarkdownReport}
                           style={{
-                            background: 'rgba(255, 255, 255, 0.1)',
-                            border: '1px solid rgba(255, 255, 255, 0.2)',
-                            color: '#fff',
+                            background: '#f1f5f9',
+                            border: '1px solid #cbd5e1',
+                            color: '#334155',
                             padding: '5px 12px',
                             borderRadius: '4px',
                             fontSize: '11px',
@@ -2575,25 +2649,14 @@ export default function App() {
                             gap: '6px',
                             transition: 'all 0.2s'
                           }}
-                          onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255, 255, 255, 0.15)'; }}
-                          onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)'; }}
                         >
-                          📥 Download
+                          📥 Download Raw Markdown
                         </button>
                       </div>
                     </div>
-                    <pre style={{ 
-                      margin: 0, 
-                      whiteSpace: 'pre-wrap', 
-                      wordBreak: 'break-all', 
-                      fontFamily: 'Consolas, Monaco, "Courier New", monospace', 
-                      fontSize: '13px', 
-                      lineHeight: '1.6', 
-                      color: '#cbd5e1',
-                      textAlign: 'left'
-                    }}>
-                      {generateMarkdownReport()}
-                    </pre>
+                    <div style={{ textAlign: 'left' }}>
+                      {renderMarkdownAsHtml(generateMarkdownReport())}
+                    </div>
                   </div>
 
                 </div>

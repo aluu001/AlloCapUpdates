@@ -27,9 +27,9 @@ const comparisonSchema = {
           originalText: { type: Type.STRING, description: 'Original text or clause (if applicable).' },
           revisedText: { type: Type.STRING, description: 'Revised text or clause (if applicable).' },
           severity: { type: Type.STRING, description: 'Severity of the change (low, medium, high).' },
-          recommendation: { type: Type.STRING, description: 'A very brief compliance recommendation or business-impact explanation for this change.' }
+          potentialImpact: { type: Type.STRING, description: 'A brief two-sentence explanation of the potential impact (risk, liability, compliance, or operations) of this change.' }
         },
-        required: ['page', 'type', 'description', 'severity', 'recommendation']
+        required: ['page', 'type', 'description', 'severity', 'potentialImpact']
       }
     },
     tableChanges: {
@@ -45,9 +45,9 @@ const comparisonSchema = {
           originalText: { type: Type.STRING, description: 'Verbatim content or cell value before the change (originalText).' },
           revisedText: { type: Type.STRING, description: 'Verbatim content or cell value after the change (revisedText).' },
           severity: { type: Type.STRING, description: 'Severity of the change (low, medium, high).' },
-          recommendation: { type: Type.STRING, description: 'A very brief compliance recommendation or business-impact explanation for this change.' }
+          potentialImpact: { type: Type.STRING, description: 'A brief two-sentence explanation of the potential impact (risk, liability, compliance, or operations) of this change.' }
         },
-        required: ['page', 'tableName', 'type', 'description', 'severity', 'recommendation']
+        required: ['page', 'tableName', 'type', 'description', 'severity', 'potentialImpact']
       }
     },
     visualChanges: {
@@ -62,9 +62,9 @@ const comparisonSchema = {
           originalText: { type: Type.STRING, description: 'The visual state or text representation before the change (originalText).' },
           revisedText: { type: Type.STRING, description: 'The visual state or text representation after the change (revisedText).' },
           severity: { type: Type.STRING, description: 'Severity of the change (low, medium, high).' },
-          recommendation: { type: Type.STRING, description: 'A very brief compliance recommendation or business-impact explanation for this change.' }
+          potentialImpact: { type: Type.STRING, description: 'A brief two-sentence explanation of the potential impact (risk, liability, compliance, or operations) of this change.' }
         },
-        required: ['page', 'type', 'description', 'severity', 'recommendation']
+        required: ['page', 'type', 'description', 'severity', 'potentialImpact']
       }
     }
   },
@@ -158,7 +158,7 @@ export async function compareDocumentsStream(
               3. **Visuals & Layout**: Identify any changes in images, charts, flowchart diagrams, headers/footers, or layout styles.
                  - For visual changes, provide a clear text description of the visual element or layout before (originalText) and after (revisedText) the change (e.g. old logo description vs new logo description).
               
-              For each and every identified change in text, tables, and visuals, provide a brief recommendation/understanding (in the 'recommendation' field) of what the change means in the grander scheme of document compliance, liability, or compliance risk.
+              For each and every identified change in text, tables, and visuals, provide a brief two-sentence explanation (in the 'potentialImpact' field) of the potential impact of the change in terms of document compliance, operational risk, or liability.
               
               Generate a structured JSON output according to the requested schema.`
             },
