@@ -1347,32 +1347,6 @@ export default function App() {
     sql += `-- Generated on: ${new Date().toISOString()}\n`;
     sql += `-- =========================================================\n\n`;
 
-    sql += `CREATE TABLE IF NOT EXISTS document_comparisons (\n`;
-    sql += `    id SERIAL PRIMARY KEY,\n`;
-    sql += `    report_title VARCHAR(255) NOT NULL,\n`;
-    sql += `    original_document VARCHAR(255) NOT NULL,\n`;
-    sql += `    revised_document VARCHAR(255) NOT NULL,\n`;
-    sql += `    comparison_date DATE,\n`;
-    sql += `    risk_rating VARCHAR(50),\n`;
-    sql += `    overall_summary TEXT,\n`;
-    sql += `    comparison_notes TEXT,\n`;
-    sql += `    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP\n`;
-    sql += `);\n\n`;
-
-    sql += `CREATE TABLE IF NOT EXISTS comparison_change_entries (\n`;
-    sql += `    id SERIAL PRIMARY KEY,\n`;
-    sql += `    comparison_id INT REFERENCES document_comparisons(id) ON DELETE CASCADE,\n`;
-    sql += `    change_category VARCHAR(50) NOT NULL, -- 'text', 'table', 'visual'\n`;
-    sql += `    page VARCHAR(50),\n`;
-    sql += `    change_type VARCHAR(100),\n`;
-    sql += `    table_name VARCHAR(255), -- only for table changes\n`;
-    sql += `    description TEXT,\n`;
-    sql += `    original_text TEXT,\n`;
-    sql += `    revised_text TEXT,\n`;
-    sql += `    severity VARCHAR(50),\n`;
-    sql += `    potential_impact TEXT\n`;
-    sql += `);\n\n`;
-
     sql += `BEGIN;\n\n`;
     
     sql += `-- 1. Insert the Comparison Run record\n`;
@@ -2902,7 +2876,7 @@ export default function App() {
                           <span>⚙️ Database Export Integration</span>
                         </h2>
                         <p style={{ fontSize: '12.5px', color: '#475569', margin: 0, lineHeight: '1.5' }}>
-                          Integrate this comparison run directly with your system. We support two integration pathways: a structured <strong>JSON payload</strong> containing the comparison metadata & categorized change logs, or a transaction-wrapped <strong>PostgreSQL DDL & DML script</strong> to initialize schemas and insert comparison entries.
+                          Integrate this comparison run directly with your system. We support two integration pathways: a structured <strong>JSON payload</strong> containing the comparison metadata & categorized change logs, or a transaction-wrapped <strong>PostgreSQL DML script</strong> to insert comparison entries (assuming tables exist).
                         </p>
                       </div>
                       <button 
@@ -2926,8 +2900,8 @@ export default function App() {
                       </button>
                     </div>
 
-                    <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)', gap: '24px', width: '100%' }}>
-                      {/* Left Column: JSON Payload */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', width: '100%' }}>
+                      {/* Top Block: JSON Payload */}
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', minWidth: 0, width: '100%' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                           <span style={{ fontSize: '12px', fontWeight: 700, color: '#002A5D', display: 'flex', alignItems: 'center', gap: '6px' }}>
@@ -2997,7 +2971,7 @@ export default function App() {
                         </div>
                       </div>
 
-                      {/* Right Column: SQL Migration */}
+                      {/* Bottom Block: SQL Migration */}
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', minWidth: 0, width: '100%' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                           <span style={{ fontSize: '12px', fontWeight: 700, color: '#002A5D', display: 'flex', alignItems: 'center', gap: '6px' }}>
