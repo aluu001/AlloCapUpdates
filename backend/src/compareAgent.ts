@@ -286,7 +286,6 @@ export async function compareDocumentsStream(
             - **Key Material Differences**: The most critical differences, such as commercial, operational, or legal shifts.
             - **Financial & Liability Impacts**: Detail any financial adjustments, liability changes, or pricing shifts.
             - **Operational & Compliance Implications**: Summarize how execution, timelines, or compliance reporting requirements change.
-            - **Strategic Recommendations**: Executive guidance on risks or opportunities identified.
             
             Use bold headings, clean bullet points, and paragraphs in your markdown content.
             
