@@ -16,11 +16,11 @@ AlloCap is optimized for both speed and financial efficiency. Users can choose f
 | **Standard (Fast)** | Fast, single-pass visual & textual comparison of the entire document. | ✔️ Yes | General Auditing | **Very Low** (Fraction of a cent) |
 | **Thorough (Page-by-Page)** | Exhaustive page-by-page split comparison capturing character-level modifications and document layer data. | ✔️ Yes | Legal & Compliance | **Linear Scale** (~$1.00–$1.50 per 78 pages) |
 
-### 🔍 Thorough Mode Cost Benchmark & Scale
+### 🔍 Thorough Mode Cost & Performance Benchmarks
 To achieve ultimate precision on long documents (e.g., contracts, lease agreements, policies), **Thorough Mode** locally splits PDFs and uploads them page-by-page. This converts a quadratic $O(N^2)$ token overhead into a linear $O(N)$ token cost pipeline:
-* **Key Metric**: Auditing a **78-page document** in Thorough Mode costs approximately **$1.00 to $1.50**.
-* **Scaling**: You can reliably assume a linear scale-up of cost based on document page count (e.g. ~$0.015 to $0.02 per page).
-* **Deep Scanning**: In addition to standard character-level edits, this cost includes extracting and parsing **inline comments, editor annotations, and sign-offs** directly within the hidden document layers—guaranteeing no detail is omitted.
+* **Cost Metric**: Auditing a **78-page document** in Thorough Mode costs approximately **$1.00 to $1.50**, scaling linearly from there at around **$0.015 to $0.02 per page**.
+* **Speed Metric**: Complete execution on a **78-page document** takes approximately **5 to 7 minutes** due to the batch-concurrency page upload queue.
+* **Auditing Rigor**: This mode runs with extreme resolution, catching adjustments all the way down to **single-letter updates and typos**. Crucially, it parses **inline comments, editor annotations, and sign-offs** directly within the hidden document layers—guaranteeing zero omissions.
 
 ---
 
