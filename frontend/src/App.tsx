@@ -1188,7 +1188,7 @@ User question about this specific difference: ${questionText}`;
         </div>
     `;
 
-    if (includeTextChanges) {
+    if (comparisonMode !== 'summary' && includeTextChanges) {
       html += `
         <div style="margin-bottom: 25px;">
           <h2 style="font-size: 16px; color: #002A5D; border-bottom: 1px solid #cbd5e1; padding-bottom: 5px; font-weight: bold;">${htmlSecText}. Text Modifications</h2>
@@ -1228,7 +1228,7 @@ User question about this specific difference: ${questionText}`;
       html += `</div>`;
     }
 
-    if (includeTableChanges) {
+    if (comparisonMode !== 'summary' && includeTableChanges) {
       html += `
         <div style="margin-bottom: 25px;">
           <h2 style="font-size: 16px; color: #002A5D; border-bottom: 1px solid #cbd5e1; padding-bottom: 5px; font-weight: bold;">${htmlSecTable}. Table Modifications</h2>
@@ -1268,7 +1268,7 @@ User question about this specific difference: ${questionText}`;
       html += `</div>`;
     }
 
-    if (includeVisualChanges) {
+    if (comparisonMode !== 'summary' && includeVisualChanges) {
       html += `
         <div style="margin-bottom: 25px;">
           <h2 style="font-size: 16px; color: #002A5D; border-bottom: 1px solid #cbd5e1; padding-bottom: 5px; font-weight: bold;">${htmlSecVisual}. Visual & Layout Modifications</h2>
@@ -1308,7 +1308,7 @@ User question about this specific difference: ${questionText}`;
       html += `</div>`;
     }
 
-    if (auditNotes.trim()) {
+    if (comparisonMode !== 'summary' && auditNotes.trim()) {
       html += `
         <div style="margin-top: 30px; border-top: 2px solid #cbd5e1; padding-top: 15px;">
           <h2 style="font-size: 16px; color: #002A5D; font-weight: bold; margin-bottom: 10px;">${htmlSecSignoff}. Comparison Notes & Sign-Off</h2>
@@ -1380,7 +1380,7 @@ User question about this specific difference: ${questionText}`;
     md += `## 1. Executive Summary\n`;
     md += `${report.overallSummary}\n\n`;
 
-    if (includeTextChanges) {
+    if (comparisonMode !== 'summary' && includeTextChanges) {
       md += `## ${mdSecText}. Text Modifications\n\n`;
       if (report.textChanges.length === 0) {
         md += `No text modifications identified.\n\n`;
@@ -1402,7 +1402,7 @@ User question about this specific difference: ${questionText}`;
       }
     }
 
-    if (includeTableChanges) {
+    if (comparisonMode !== 'summary' && includeTableChanges) {
       md += `## ${mdSecTable}. Table Modifications\n\n`;
       if (report.tableChanges.length === 0) {
         md += `No table modifications identified.\n\n`;
@@ -1424,7 +1424,7 @@ User question about this specific difference: ${questionText}`;
       }
     }
 
-    if (includeVisualChanges) {
+    if (comparisonMode !== 'summary' && includeVisualChanges) {
       md += `## ${mdSecVisual}. Visual & Layout Modifications\n\n`;
       if (report.visualChanges.length === 0) {
         md += `No visual modifications identified.\n\n`;
@@ -1446,7 +1446,7 @@ User question about this specific difference: ${questionText}`;
       }
     }
 
-    if (auditNotes.trim()) {
+    if (comparisonMode !== 'summary' && auditNotes.trim()) {
       md += `---\n\n`;
       md += `## ${mdSecSignoff}. Comparison Notes & Sign-Off\n`;
       md += `*${auditNotes}*\n\n`;
@@ -2967,7 +2967,7 @@ User question about this specific difference: ${questionText}`;
                     </div>
 
                     {/* Section 2: Text Changes */}
-                    {includeTextChanges && (
+                    {(comparisonMode !== 'summary' && includeTextChanges) && (
                       <div className="print-section" style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                         <h3 style={{ fontSize: '14px', color: '#002A5D', fontWeight: 700, borderBottom: '1px solid #e2e8f0', paddingBottom: '4px' }}>{printSecText}. Text Modifications</h3>
                         {report.textChanges.length === 0 ? (
@@ -3018,7 +3018,7 @@ User question about this specific difference: ${questionText}`;
                     )}
 
                     {/* Section 3: Table Changes */}
-                    {includeTableChanges && (
+                    {(comparisonMode !== 'summary' && includeTableChanges) && (
                       <div className="print-section" style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                         <h3 style={{ fontSize: '14px', color: '#002A5D', fontWeight: 700, borderBottom: '1px solid #e2e8f0', paddingBottom: '4px' }}>{printSecTable}. Table Modifications</h3>
                         {report.tableChanges.length === 0 ? (
@@ -3069,7 +3069,7 @@ User question about this specific difference: ${questionText}`;
                     )}
 
                     {/* Section 4: Visual Changes */}
-                    {includeVisualChanges && (
+                    {(comparisonMode !== 'summary' && includeVisualChanges) && (
                       <div className="print-section" style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                         <h3 style={{ fontSize: '14px', color: '#002A5D', fontWeight: 700, borderBottom: '1px solid #e2e8f0', paddingBottom: '4px' }}>{printSecVisual}. Visual & Layout Modifications</h3>
                         {report.visualChanges.length === 0 ? (
@@ -3120,7 +3120,7 @@ User question about this specific difference: ${questionText}`;
                     )}
 
                     {/* Section 5: Comparison Notes & Sign-off */}
-                    {auditNotes.trim() && (
+                    {(comparisonMode !== 'summary' && auditNotes.trim()) && (
                       <div className="print-section" style={{ display: 'flex', flexDirection: 'column', gap: '8px', borderTop: '2px solid #e2e8f0', paddingTop: '16px', marginTop: '12px', pageBreakInside: 'avoid', breakInside: 'avoid' }}>
                         <h3 style={{ fontSize: '14px', color: '#002A5D', fontWeight: 700 }}>{printSecSignoff}. Comparison Notes & Sign-Off</h3>
                         <p style={{ fontSize: '12.5px', color: '#334155', lineHeight: '1.6', margin: 0, fontStyle: 'italic' }}>
