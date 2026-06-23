@@ -8,9 +8,10 @@ This document provides a comprehensive history of the milestones, layout redesig
 * **Technology Stack**: Set up a Node.js + Express + TypeScript server backend paired with a React + Vite + TypeScript frontend.
 * **Gemini Integration**: Built a connection to the Google Gen AI SDK utilizing `gemini-3.5-flash` for high-speed textual and visual analysis.
 * **Page-by-Page Batched Pipeline**: Implemented a batch-concurrency loop (concurrency limit = `3`) that queries page counts first and scans documents page-by-page. This eliminates LLM output context limits and attention drops in large agreements, dynamically aggregating text, table, and visual changes.
-* **Dual Comparison Modes**:
-  * **Standard (Fast)**: Single-pass overall audit ideal for quick analysis (~10–15 seconds).
-  * **Thorough (Page-by-Page)**: Exhaustive page-by-page scan for character-level precision.
+* **Three Comparison Modes**:
+  * **Summary of Changes**: High-level, structured 1-to-2 page executive write-up covering key commercial, operational, financial, and compliance changes (omits detailed character-level list cards).
+  * **Standard (Fast)**: Single-pass overall audit ideal for quick, rapid turnaround comparisons.
+  * **Thorough (Page-by-Page)**: Exhaustive page-by-page scan for character-level precision, including reading inline comments, annotations, and sign-offs.
 * **Thorough Mode Page-Splitting & Token Optimization**: Re-engineered Thorough mode to locally split PDFs using `pdf-lib` and compare single-page PDFs on-the-fly, reducing input token complexity from quadratic $O(N^2)$ to linear $O(N)$ and decreasing input token costs by up to 98% for long documents.
 * **Pre-Comparison Compatibility Validator**: Integrated a Gemini-powered document alignment step that scans Page 1 headers, parties, and content to block unrelated files (e.g. comparing a lease agreement to a recipe) with a structured response schema.
 
@@ -24,6 +25,7 @@ This document provides a comprehensive history of the milestones, layout redesig
   * **Emerald Green** (`#21874c`) for low-severity highlights.
 * **Collapsible Layout**: Added a header hamburger menu button to collapse the left navigation sidebar. The storage drawer slides in sync to maximize screen space.
 * **Direct File Dropdowns**: Replaced abstract document slot cards with direct, searchable select dropdown menus in the workspace, with automated conflict checking.
+* **Modern Mode Selectors**: Styled active toggles in Cobalt Navy (`#015294`) with white text and shadows, and integrated dynamic description cards describing each mode.
 
 ---
 
@@ -99,3 +101,9 @@ Here is a detailed, day-by-day record of all commits and developments made to th
 * **PDF Tab Print Isolation**: Modified print stylesheets in `index.css` to hide all screen layouts (`display: none !important`) by default, forcing only `#printable-report` to display print.
 * **Risk Rating Cleanup**: Removed risk ratings and replaced them with "Prepared By: Anthony Luu" across HTML, Markdown, Copy HTML, and JSON/SQL database formats.
 * **Workspace Inline Warning Card**: Replaced generic browser alert popups with a styled, dismissible warning banner inside the comparison dashboard.
+* **Compare Mode Toggle Modernization**: Redesigned selection toggles to use Cobalt Navy (`#015294`) with white text and clean shadows when active, and transparent background with grey text when inactive.
+* **Dynamic Mode Description Cards**: Added an inline card below the toggles that updates dynamically with descriptions for Standard, Thorough, and Summary of Changes modes, highlighting Thorough mode's ability to read comments, annotations, and sign-offs in document layers.
+* **Summary of Changes Comparison Mode**: Introduced a new high-level, executive-level comparison mode as the leftmost toggle option. Instructs Gemini to generate a structured 1-to-2 page write-up covering *Executive Summary & Overview*, *Key Material Differences*, *Financial & Liability Impacts*, and *Operational & Compliance Implications*, returning empty lists for detailed modifications.
+* **Smart Section Omissions**: Programmed the printable HTML preview, raw markdown exports, and clipboard copy templates to completely hide empty Text, Table, Visual, and Sign-off sections when running in Summary of Changes mode.
+* **Markdown-to-HTML Clipboard Pipeline**: Integrated a custom Markdown-to-HTML parser inside `copyHTMLReport` to cleanly translate markdown formatting to inline-styled tags for copy-pasting report summaries directly into MS Word or SharePoint.
+
