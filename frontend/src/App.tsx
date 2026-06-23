@@ -2157,7 +2157,7 @@ User question about this specific difference: ${questionText}`;
                       <div>
                         <div style={{ fontSize: '10px', fontWeight: 700, color: '#015294', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '4px' }}>⚡ Standard Mode Active</div>
                         <p style={{ fontSize: '11.5px', color: '#475569', margin: 0, lineHeight: 1.4 }}>
-                          Runs a fast, single-pass document scan. Best suited for general audits, formatting edits, and standard contract comparisons. Completes rapidly in approximately <strong>10–15 seconds</strong>.
+                          Runs a fast, single-pass document scan. Best suited for general audits, formatting edits, and standard contract comparisons, optimized for rapid execution.
                         </p>
                       </div>
                     ) : (
