@@ -1,5 +1,8 @@
-import { ai } from './config';
+import { ai, config } from './config';
 import { Type } from '@google/genai';
+import { PDFDocument } from 'pdf-lib';
+import * as fs from 'fs';
+import * as path from 'path';
 
 const GEMINI_MODEL = 'gemini-3.5-flash';
 
@@ -136,6 +139,47 @@ async function waitForFileActive(fileName: string, onProgress?: (msg: string) =>
 }
 
 /**
+ * Splits a PDF file into individual single-page PDF files locally.
+ * Returns an array of absolute paths to the split PDF files.
+ */
+async function splitPdf(inputPath: string, outputDir: string, filePrefix: string): Promise<string[]> {
+  if (!fs.existsSync(outputDir)) {
+    fs.mkdirSync(outputDir, { recursive: true });
+  }
+
+  const data = fs.readFileSync(inputPath);
+  const pdfDoc = await PDFDocument.load(data);
+  const pageCount = pdfDoc.getPageCount();
+  const pagePaths: string[] = [];
+
+  for (let i = 0; i < pageCount; i++) {
+    const newPdf = await PDFDocument.create();
+    const [copiedPage] = await newPdf.copyPages(pdfDoc, [i]);
+    newPdf.addPage(copiedPage);
+    const pdfBytes = await newPdf.save();
+    
+    const outputPath = path.join(outputDir, `${filePrefix}_page_${i + 1}.pdf`);
+    fs.writeFileSync(outputPath, pdfBytes);
+    pagePaths.push(outputPath);
+  }
+
+  return pagePaths;
+}
+
+/**
+ * Recursively deletes a directory and all of its contents.
+ */
+function cleanupTempDir(dirPath: string) {
+  try {
+    if (fs.existsSync(dirPath)) {
+      fs.rmSync(dirPath, { recursive: true, force: true });
+    }
+  } catch (err) {
+    console.error(`Failed to clean up temp directory ${dirPath}:`, err);
+  }
+}
+
+/**
  * Compares two uploaded documents using Gemini 3.5 Flash supporting both Standard (fast single-pass) 
  * and Thorough (page-by-page chunks) comparison modes.
  */
@@ -150,77 +194,79 @@ export async function compareDocumentsStream(
 ) {
   let fileARef: any = null;
   let fileBRef: any = null;
+  const geminiFilesToDelete: string[] = [];
+  let tempDirPath: string | null = null;
 
   try {
-    // 1. Upload original document
-    onProgress(`Uploading Original Document (${fileAName}) to Gemini Files API...`);
-    fileARef = await ai.files.upload({
-      file: fileAPath,
-      config: {
-        mimeType: 'application/pdf',
-        displayName: `Original_${fileAName}`
-      }
-    });
-
-    // 2. Upload revised document
-    onProgress(`Uploading Revised Document (${fileBName}) to Gemini Files API...`);
-    fileBRef = await ai.files.upload({
-      file: fileBPath,
-      config: {
-        mimeType: 'application/pdf',
-        displayName: `Revised_${fileBName}`
-      }
-    });
-
-    // 3. Wait for both files to become ACTIVE
-    onProgress('Waiting for Original Document to process...');
-    await waitForFileActive(fileARef.name, onProgress);
-
-    onProgress('Waiting for Revised Document to process...');
-    await waitForFileActive(fileBRef.name, onProgress);
-
-    // 4. Verify that the two documents are actually related before auditing
-    onProgress('Verifying document alignment and compatibility...');
-    const validationResponse = await ai.models.generateContent({
-      model: GEMINI_MODEL,
-      contents: [
-        {
-          text: `You are an expert document comparison auditor. You must analyze the content, titles, subject matter, entities/parties, and structure of these two uploaded documents and determine if they are compatible for comparison.
-
-          CRITICAL COMPATIBILITY RULES:
-          1. The documents MUST be revisions, drafts, amendments, or different versions of the EXACT SAME underlying agreement, contract, report, or specific project.
-          2. If the documents are different agreements entirely—even if they are of the same type (for example, two different lease agreements for different properties/tenants, or two different employment contracts for different people)—they are NOT compatible. You MUST flag them as mismatched (related = false).
-          3. If the documents cover completely different subject matters, programs, states, or purposes (for example, Georgia DHS CAP program vs a corporate handbook, or an expenditure audit vs a payroll data format), they are NOT compatible. You MUST flag them as mismatched (related = false).
-          4. Perform a rigorous, conservative assessment. If they are not versions of the same document, they are mismatched.`
-        },
-        { fileData: { fileUri: fileARef.uri, mimeType: fileARef.mimeType } },
-        { fileData: { fileUri: fileBRef.uri, mimeType: fileBRef.mimeType } }
-      ],
-      config: {
-        responseMimeType: 'application/json',
-        responseJsonSchema: documentValidationSchema,
-        temperature: 0.1
-      }
-    });
-
-    let isRelated = true;
-    let mismatchReason = '';
-    try {
-      const valData = JSON.parse(validationResponse.text || '{}');
-      if (valData.related === false) {
-        isRelated = false;
-        mismatchReason = valData.reason || 'The selected documents represent completely unrelated content.';
-      }
-    } catch (e) {
-      console.error('Failed to parse document relationship validation, continuing comparison', e);
-    }
-
-    if (!isRelated) {
-      throw new Error(`Document Mismatch: ${mismatchReason}`);
-    }
-
     // 5. STANDARD MODE: Fast Single-Pass Comparison
     if (mode === 'standard') {
+      onProgress(`Uploading Original Document (${fileAName}) to Gemini Files API...`);
+      fileARef = await ai.files.upload({
+        file: fileAPath,
+        config: {
+          mimeType: 'application/pdf',
+          displayName: `Original_${fileAName}`
+        }
+      });
+      geminiFilesToDelete.push(fileARef.name);
+
+      onProgress(`Uploading Revised Document (${fileBName}) to Gemini Files API...`);
+      fileBRef = await ai.files.upload({
+        file: fileBPath,
+        config: {
+          mimeType: 'application/pdf',
+          displayName: `Revised_${fileBName}`
+        }
+      });
+      geminiFilesToDelete.push(fileBRef.name);
+
+      // Wait for both files to become ACTIVE
+      onProgress('Waiting for Original Document to process...');
+      await waitForFileActive(fileARef.name, onProgress);
+
+      onProgress('Waiting for Revised Document to process...');
+      await waitForFileActive(fileBRef.name, onProgress);
+
+      // Verify that the two documents are actually related before auditing
+      onProgress('Verifying document alignment and compatibility...');
+      const validationResponse = await ai.models.generateContent({
+        model: GEMINI_MODEL,
+        contents: [
+          {
+            text: `You are an expert document comparison auditor. You must analyze the content, titles, subject matter, entities/parties, and structure of these two uploaded documents and determine if they are compatible for comparison.
+
+            CRITICAL COMPATIBILITY RULES:
+            1. The documents MUST be revisions, drafts, amendments, or different versions of the EXACT SAME underlying agreement, contract, report, or specific project.
+            2. If the documents are different agreements entirely—even if they are of the same type (for example, two different lease agreements for different properties/tenants, or two different employment contracts for different people)—they are NOT compatible. You MUST flag them as mismatched (related = false).
+            3. If the documents cover completely different subject matters, programs, states, or purposes (for example, Georgia DHS CAP program vs a corporate handbook, or an expenditure audit vs a payroll data format), they are NOT compatible. You MUST flag them as mismatched (related = false).
+            4. Perform a rigorous, conservative assessment. If they are not versions of the same document, they are mismatched.`
+          },
+          { fileData: { fileUri: fileARef.uri, mimeType: fileARef.mimeType } },
+          { fileData: { fileUri: fileBRef.uri, mimeType: fileBRef.mimeType } }
+        ],
+        config: {
+          responseMimeType: 'application/json',
+          responseJsonSchema: documentValidationSchema,
+          temperature: 0.1
+        }
+      });
+
+      let isRelated = true;
+      let mismatchReason = '';
+      try {
+        const valData = JSON.parse(validationResponse.text || '{}');
+        if (valData.related === false) {
+          isRelated = false;
+          mismatchReason = valData.reason || 'The selected documents represent completely unrelated content.';
+        }
+      } catch (e) {
+        console.error('Failed to parse document relationship validation, continuing comparison', e);
+      }
+
+      if (!isRelated) {
+        throw new Error(`Document Mismatch: ${mismatchReason}`);
+      }
+
       onProgress('Comparing documents textually and visually in Standard Mode...');
       const responseStream = await ai.models.generateContentStream({
         model: GEMINI_MODEL,
@@ -283,75 +329,152 @@ export async function compareDocumentsStream(
       return JSON.parse(fullJsonText);
     }
 
-    // 6. THOROUGH MODE: Page-by-Page Batched Loops
-    onProgress('Analyzing page count of original document...');
-    const pageCountAResp = await ai.models.generateContent({
-      model: GEMINI_MODEL,
-      contents: [
-        { fileData: { fileUri: fileARef.uri, mimeType: fileARef.mimeType } },
-        { text: 'Return a JSON object containing the total page count of this PDF document. Format: { "pageCount": <number> }. Do not include markdown brackets.' }
-      ],
-      config: { responseMimeType: 'application/json' }
-    });
+    // 6. THOROUGH MODE: Local Page-Splitting & Single-Page Targeted Comparisons
+    onProgress('Analyzing page counts of documents locally...');
+    const dataA = fs.readFileSync(fileAPath);
+    const pdfDocA = await PDFDocument.load(dataA);
+    const pageCountA = pdfDocA.getPageCount();
 
-    let pageCountA = 1;
-    try {
-      const data = JSON.parse(pageCountAResp.text || '{}');
-      if (data.pageCount) pageCountA = Number(data.pageCount);
-    } catch (e) {
-      console.error('Failed to parse page count for original document, defaulting to 1', e);
-    }
-
-    onProgress('Analyzing page count of revised document...');
-    const pageCountBResp = await ai.models.generateContent({
-      model: GEMINI_MODEL,
-      contents: [
-        { fileData: { fileUri: fileBRef.uri, mimeType: fileBRef.mimeType } },
-        { text: 'Return a JSON object containing the total page count of this PDF document. Format: { "pageCount": <number> }. Do not include markdown brackets.' }
-      ],
-      config: { responseMimeType: 'application/json' }
-    });
-
-    let pageCountB = 1;
-    try {
-      const data = JSON.parse(pageCountBResp.text || '{}');
-      if (data.pageCount) pageCountB = Number(data.pageCount);
-    } catch (e) {
-      console.error('Failed to parse page count for revised document, defaulting to 1', e);
-    }
+    const dataB = fs.readFileSync(fileBPath);
+    const pdfDocB = await PDFDocument.load(dataB);
+    const pageCountB = pdfDocB.getPageCount();
 
     const maxPages = Math.max(pageCountA, pageCountB);
     onProgress(`Detected ${pageCountA} pages (Original) vs ${pageCountB} pages (Revised). Preparing comparative scan over ${maxPages} pages...`);
 
+    onProgress('Splitting documents locally page-by-page...');
+    const sessionId = `split_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    tempDirPath = path.join(config.storageDir, 'temp_split', sessionId);
+    
+    const pagePathsA = await splitPdf(fileAPath, tempDirPath, 'original');
+    const pagePathsB = await splitPdf(fileBPath, tempDirPath, 'revised');
+
+    onProgress('Uploading Page 1 segments to verify alignment...');
+    const page1PathA = pagePathsA[0];
+    const page1PathB = pagePathsB[0];
+
+    let page1RefA: any = null;
+    let page1RefB: any = null;
+
+    if (page1PathA && fs.existsSync(page1PathA)) {
+      page1RefA = await ai.files.upload({
+        file: page1PathA,
+        config: { mimeType: 'application/pdf', displayName: `Original_Page_1` }
+      });
+      geminiFilesToDelete.push(page1RefA.name);
+    }
+
+    if (page1PathB && fs.existsSync(page1PathB)) {
+      page1RefB = await ai.files.upload({
+        file: page1PathB,
+        config: { mimeType: 'application/pdf', displayName: `Revised_Page_1` }
+      });
+      geminiFilesToDelete.push(page1RefB.name);
+    }
+
+    if (page1RefA) await waitForFileActive(page1RefA.name, onProgress);
+    if (page1RefB) await waitForFileActive(page1RefB.name, onProgress);
+
+    onProgress('Verifying document alignment and compatibility on Page 1...');
+    const validationContents: any[] = [
+      {
+        text: `You are an expert document comparison auditor. You must analyze the content, titles, subject matter, entities/parties, and structure of these two uploaded Page 1 segments and determine if they are compatible for comparison.
+
+        CRITICAL COMPATIBILITY RULES:
+        1. The documents MUST be revisions, drafts, amendments, or different versions of the EXACT SAME underlying agreement, contract, report, or specific project.
+        2. If the documents are different agreements entirely—even if they are of the same type (for example, two different lease agreements for different properties/tenants, or two different employment contracts for different people)—they are NOT compatible. You MUST flag them as mismatched (related = false).
+        3. If the documents cover completely different subject matters, programs, states, or purposes (for example, Georgia DHS CAP program vs a corporate handbook, or an expenditure audit vs a payroll data format), they are NOT compatible. You MUST flag them as mismatched (related = false).
+        4. Perform a rigorous, conservative assessment. If they are not versions of the same document, they are mismatched.`
+      }
+    ];
+
+    if (page1RefA) validationContents.push({ fileData: { fileUri: page1RefA.uri, mimeType: page1RefA.mimeType } });
+    if (page1RefB) validationContents.push({ fileData: { fileUri: page1RefB.uri, mimeType: page1RefB.mimeType } });
+
+    const validationResponse = await ai.models.generateContent({
+      model: GEMINI_MODEL,
+      contents: validationContents,
+      config: {
+        responseMimeType: 'application/json',
+        responseJsonSchema: documentValidationSchema,
+        temperature: 0.1
+      }
+    });
+
+    let isRelated = true;
+    let mismatchReason = '';
+    try {
+      const valData = JSON.parse(validationResponse.text || '{}');
+      if (valData.related === false) {
+        isRelated = false;
+        mismatchReason = valData.reason || 'The selected documents represent completely unrelated content.';
+      }
+    } catch (e) {
+      console.error('Failed to parse document relationship validation, continuing comparison', e);
+    }
+
+    if (!isRelated) {
+      throw new Error(`Document Mismatch: ${mismatchReason}`);
+    }
+
     // Helper function to compare an individual page using content streams
     async function comparePage(pageNumber: number): Promise<any> {
+      let pageRefA: any = null;
+      let pageRefB: any = null;
       try {
+        if (pageNumber === 1) {
+          pageRefA = page1RefA;
+          pageRefB = page1RefB;
+        } else {
+          const pagePathA = pagePathsA[pageNumber - 1];
+          if (pagePathA && fs.existsSync(pagePathA)) {
+            pageRefA = await ai.files.upload({
+              file: pagePathA,
+              config: { mimeType: 'application/pdf', displayName: `Original_Page_${pageNumber}` }
+            });
+          }
+
+          const pagePathB = pagePathsB[pageNumber - 1];
+          if (pagePathB && fs.existsSync(pagePathB)) {
+            pageRefB = await ai.files.upload({
+              file: pagePathB,
+              config: { mimeType: 'application/pdf', displayName: `Revised_Page_${pageNumber}` }
+            });
+          }
+
+          if (pageRefA) await waitForFileActive(pageRefA.name);
+          if (pageRefB) await waitForFileActive(pageRefB.name);
+        }
+
+        const contents: any[] = [
+          {
+            text: `You are an expert document auditor. Compare the contents of this page of the Original document ("${fileAName}") with this page of the Revised document ("${fileBName}").
+            
+            CRITICAL REQUIREMENT: Identify and report every single difference on this specific page. Even if a modification is a single-letter change (e.g. spelling fixes, punctuation updates, singular vs. plural, one-letter edits, or formatting corrections), you MUST report it. Absolutely do NOT omit, skip, summarize, or group any changes on this page.
+            
+            Identify every difference:
+            1. **Text Content**: Identify modifications, deletions, and additions in the text on this page.
+               - For 'added' items: Set 'originalText' to null or empty, and populate 'revisedText' with the verbatim text that was added.
+               - For 'deleted' items: Populate 'originalText' with the verbatim text that was deleted, and set 'revisedText' to null or empty.
+               - For 'modified' items: Verbatim before (originalText) and after (revisedText) segments must be provided.
+               - Never paraphrase or summarize inside originalText/revisedText; extract the exact segments verbatim.
+            2. **Tables**: Identify any changes in tables (structure, new rows, new columns, value updates) on this page. Always extract the verbatim content/value of the table section or row before (originalText) and after (revisedText) the change.
+            3. **Visuals & Layout**: Identify any changes in images, charts, flowchart diagrams, headers/footers, or layout styles on this page. Provide a clear text description of the visual element or layout before (originalText) and after (revisedText).
+            
+            For each and every identified change in text, tables, and visuals, provide a brief two-sentence explanation (in the 'potentialImpact' field) of the potential impact of the change in terms of compliance, operational risk, or liability.
+            
+            If this page only exists in one of the documents (because it is an extra page in the other), treat all content on this page as entirely added or deleted.
+            
+            Generate a structured JSON output according to the requested schema.`
+          }
+        ];
+
+        if (pageRefA) contents.push({ fileData: { fileUri: pageRefA.uri, mimeType: pageRefA.mimeType } });
+        if (pageRefB) contents.push({ fileData: { fileUri: pageRefB.uri, mimeType: pageRefB.mimeType } });
+
         const responseStream = await ai.models.generateContentStream({
           model: GEMINI_MODEL,
-          contents: [
-            {
-              text: `You are an expert document auditor. Focus ONLY on Page ${pageNumber} of both documents. Compare the contents on Page ${pageNumber} of the Original document ("${fileAName}") with Page ${pageNumber} of the Revised document ("${fileBName}").
-              
-              CRITICAL REQUIREMENT: Identify and report every single difference on this specific page. Even if a modification is a single-letter change (e.g. spelling fixes, punctuation updates, singular vs. plural, one-letter edits, or formatting corrections), you MUST report it. Absolutely do NOT omit, skip, summarize, or group any changes on Page ${pageNumber}.
-              
-              Identify every difference:
-              1. **Text Content**: Identify modifications, deletions, and additions in the text on Page ${pageNumber}.
-                 - For 'added' items: Set 'originalText' to null or empty, and populate 'revisedText' with the verbatim text that was added.
-                 - For 'deleted' items: Populate 'originalText' with the verbatim text that was deleted, and set 'revisedText' to null or empty.
-                 - For 'modified' items: Verbatim before (originalText) and after (revisedText) segments must be provided.
-                 - Never paraphrase or summarize inside originalText/revisedText; extract the exact segments verbatim.
-              2. **Tables**: Identify any changes in tables (structure, new rows, new columns, value updates) on Page ${pageNumber}. Always extract the verbatim content/value of the table section or row before (originalText) and after (revisedText) the change.
-              3. **Visuals & Layout**: Identify any changes in images, charts, flowchart diagrams, headers/footers, or layout styles on Page ${pageNumber}. Provide a clear text description of the visual element or layout before (originalText) and after (revisedText).
-              
-              For each and every identified change in text, tables, and visuals, provide a brief two-sentence explanation (in the 'potentialImpact' field) of the potential impact of the change in terms of compliance, operational risk, or liability.
-              
-              If one of the documents does not have a Page ${pageNumber} (because it has fewer pages), treat all content on Page ${pageNumber} of the other document as entirely added or deleted.
-              
-              Generate a structured JSON output according to the requested schema.`
-            },
-            { fileData: { fileUri: fileARef.uri, mimeType: fileARef.mimeType } },
-            { fileData: { fileUri: fileBRef.uri, mimeType: fileBRef.mimeType } }
-          ],
+          contents,
           config: {
             responseMimeType: 'application/json',
             responseJsonSchema: pageComparisonSchema,
@@ -391,6 +514,14 @@ export async function compareDocumentsStream(
       } catch (err: any) {
         console.error(`Error comparing page ${pageNumber}:`, err);
         return { textChanges: [], tableChanges: [], visualChanges: [] };
+      } finally {
+        // Clean up Gemini Files for this page immediately (except Page 1, which is deleted in outer finally)
+        if (pageNumber > 1) {
+          const toDelete = [];
+          if (pageRefA?.name) toDelete.push(ai.files.delete({ name: pageRefA.name }));
+          if (pageRefB?.name) toDelete.push(ai.files.delete({ name: pageRefB.name }));
+          await Promise.all(toDelete).catch(err => console.error(`Failed to delete page ${pageNumber} files from Gemini:`, err));
+        }
       }
     }
 
@@ -471,20 +602,20 @@ export async function compareDocumentsStream(
     };
 
   } finally {
-    // 8. Cleanup files from Gemini storage
+    // 8. Cleanup remaining files from Gemini storage
     const cleanupPromises: Promise<any>[] = [];
-    if (fileARef?.name) {
-      onProgress(`Cleaning up original file from Gemini storage...`);
-      cleanupPromises.push(ai.files.delete({ name: fileARef.name }).catch(err => {
-        console.error(`Failed to delete temporary file ${fileARef.name}:`, err);
-      }));
-    }
-    if (fileBRef?.name) {
-      onProgress(`Cleaning up revised file from Gemini storage...`);
-      cleanupPromises.push(ai.files.delete({ name: fileBRef.name }).catch(err => {
-        console.error(`Failed to delete temporary file ${fileBRef.name}:`, err);
+    for (const fileName of geminiFilesToDelete) {
+      onProgress(`Cleaning up file ${fileName} from Gemini storage...`);
+      cleanupPromises.push(ai.files.delete({ name: fileName }).catch(err => {
+        // Silently catch if already deleted
       }));
     }
     await Promise.all(cleanupPromises);
+
+    // Cleanup local temp split files
+    if (tempDirPath) {
+      onProgress('Cleaning up local temporary files...');
+      cleanupTempDir(tempDirPath);
+    }
   }
 }

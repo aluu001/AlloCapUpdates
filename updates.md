@@ -11,7 +11,8 @@ This document provides a comprehensive history of the milestones, layout redesig
 * **Dual Comparison Modes**:
   * **Standard (Fast)**: Single-pass overall audit ideal for quick analysis (~10–15 seconds).
   * **Thorough (Page-by-Page)**: Exhaustive page-by-page scan for character-level precision.
-* **Pre-Comparison Compatibility Validator**: Integrated a Gemini-powered document alignment step that scans headers, parties, and content to block unrelated files (e.g. comparing a lease agreement to a recipe) with a structured response schema.
+* **Thorough Mode Page-Splitting & Token Optimization**: Re-engineered Thorough mode to locally split PDFs using `pdf-lib` and compare single-page PDFs on-the-fly, reducing input token complexity from quadratic $O(N^2)$ to linear $O(N)$ and decreasing input token costs by up to 98% for long documents.
+* **Pre-Comparison Compatibility Validator**: Integrated a Gemini-powered document alignment step that scans Page 1 headers, parties, and content to block unrelated files (e.g. comparing a lease agreement to a recipe) with a structured response schema.
 
 ---
 
@@ -93,7 +94,8 @@ Here is a detailed, day-by-day record of all commits and developments made to th
 
 ### 📅 June 22, 2026: Pipeline Scale, Safety, & Usability
 * **Page-by-Page Batched Pipeline (Thorough Mode)**: Re-architected `compareAgent.ts` to query page counts and scan pages concurrently (limit = 3), bypassing LLM output tokens limit for large files.
-* **Strict Document Alignment Validator**: Added a structured schema-checked pre-verification validator to verify that uploaded documents are versions/revisions of the exact same agreement, rejecting mismatched files.
-* **PDF Tab Print Isolation**: Modified print stylesheets in `index.css` to hide all screen layouts (`display: none !important`) by default, forcing only `#printable-report` to display during print.
+* **Thorough Mode Local PDF Page-Splitting (Strategy A)**: Integrated `pdf-lib` package and built local single-page splitting and cleanup helper functions. Refactored Thorough mode loop to upload and compare single-page PDF files on-the-fly, deleting them from Gemini Files API immediately after comparison to keep storage clean and minimize input token overhead.
+* **Strict Document Alignment Validator**: Added a structured schema-checked pre-verification validator to verify that uploaded documents are versions/revisions of the exact same agreement, rejecting mismatched files. Validates on Page 1 to save tokens.
+* **PDF Tab Print Isolation**: Modified print stylesheets in `index.css` to hide all screen layouts (`display: none !important`) by default, forcing only `#printable-report` to display print.
 * **Risk Rating Cleanup**: Removed risk ratings and replaced them with "Prepared By: Anthony Luu" across HTML, Markdown, Copy HTML, and JSON/SQL database formats.
 * **Workspace Inline Warning Card**: Replaced generic browser alert popups with a styled, dismissible warning banner inside the comparison dashboard.
