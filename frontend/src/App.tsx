@@ -2122,9 +2122,9 @@ User question about this specific difference: ${questionText}`;
                         fontSize: '12px',
                         fontWeight: 600,
                         cursor: 'pointer',
-                        background: comparisonMode === 'standard' ? '#ffffff' : 'transparent',
-                        color: comparisonMode === 'standard' ? '#015294' : '#64748b',
-                        boxShadow: comparisonMode === 'standard' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+                        background: comparisonMode === 'standard' ? '#015294' : 'transparent',
+                        color: comparisonMode === 'standard' ? '#ffffff' : '#64748b',
+                        boxShadow: comparisonMode === 'standard' ? '0 2px 4px rgba(1, 82, 148, 0.2)' : 'none',
                         transition: 'all 0.2s'
                       }}
                     >
@@ -2141,21 +2141,34 @@ User question about this specific difference: ${questionText}`;
                         fontSize: '12px',
                         fontWeight: 600,
                         cursor: 'pointer',
-                        background: comparisonMode === 'thorough' ? '#ffffff' : 'transparent',
-                        color: comparisonMode === 'thorough' ? '#015294' : '#64748b',
-                        boxShadow: comparisonMode === 'thorough' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+                        background: comparisonMode === 'thorough' ? '#015294' : 'transparent',
+                        color: comparisonMode === 'thorough' ? '#ffffff' : '#64748b',
+                        boxShadow: comparisonMode === 'thorough' ? '0 2px 4px rgba(1, 82, 148, 0.2)' : 'none',
                         transition: 'all 0.2s'
                       }}
                     >
                       Thorough (Page-by-Page)
                     </button>
                   </div>
-                  <p style={{ fontSize: '10.5px', color: '#64748b', margin: '2px 0 0', fontStyle: 'italic', textAlign: 'center' }}>
-                    {comparisonMode === 'standard' 
-                      ? "Fast single-pass analysis; ideal for most documents."
-                      : "Exhaustive page-by-page scan; ideal for detecting every character-level difference."
-                    }
-                  </p>
+                  
+                  {/* Dynamic Mode Description Card */}
+                  <div style={{ marginTop: '4px', background: '#f8fafc', border: '1px solid #cbd5e1', borderRadius: '6px', padding: '10px 14px', textAlign: 'left', boxShadow: 'inset 0 1px 2px rgba(0,0,0,0.01)' }}>
+                    {comparisonMode === 'standard' ? (
+                      <div>
+                        <div style={{ fontSize: '10px', fontWeight: 700, color: '#015294', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '4px' }}>⚡ Standard Mode Active</div>
+                        <p style={{ fontSize: '11.5px', color: '#475569', margin: 0, lineHeight: 1.4 }}>
+                          Runs a fast, single-pass document scan. Best suited for general audits, formatting edits, and standard contract comparisons. Completes rapidly in approximately <strong>10–15 seconds</strong>.
+                        </p>
+                      </div>
+                    ) : (
+                      <div>
+                        <div style={{ fontSize: '10px', fontWeight: 700, color: '#007E9E', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '4px' }}>🔍 Thorough Mode Active</div>
+                        <p style={{ fontSize: '11.5px', color: '#475569', margin: 0, lineHeight: 1.4 }}>
+                          Executes an exhaustive, page-by-page visual and textual audit. Catching minor single-letter updates, spelling fixes, and layout adjustments. Crucially, this mode <strong>reads and analyzes inline comments, editor annotations, and sign-offs</strong> directly within the document layers.
+                        </p>
+                      </div>
+                    )}
+                  </div>
                 </div>
 
                 {/* Main Action Button */}
