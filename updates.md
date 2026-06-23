@@ -62,3 +62,38 @@ This document provides a comprehensive history of the milestones, layout redesig
 ## 7. PDF Export & Error Resiliency
 * **Print-Isolated PDF Engine**: Configured print CSS variables to set `.report-paper-page` to `display: none !important` by default, forcing only `#printable-report` to `display: block !important`. Hitting "Export to PDF" from *any* active tab prints only the formal HTML sheet, hiding chatbot controls and developer tools.
 * **Inline Error Warning Card**: Switched out standard browser alert prompts with a dismissible warning card inside the comparison panel layout, displaying clean error reasons for file mismatches or offline issues.
+
+---
+
+## 8. Chronological Timeline of Updates
+
+Here is a detailed, day-by-day record of all commits and developments made to the codebase, tracking exactly when each feature was implemented.
+
+### 📅 May 28, 2026: Foundation & Visual Modernization
+* **Initial Fullstack Setup**: Committed the base Node.js + Express backend and Vite + React frontend boilerplate integrated with Gemini Files API.
+* **Stepping Loader & Verbatim Diffs**: Added the detailed loading check-stepper interface and built the initial side-by-side verbatim text extraction delta panels.
+* **Streaming Thinking Console**: Enabled Gemini API thought streaming and designed the light-theme corporate console styling to render thinking tokens in real-time with custom markdown and a flashing cursor caret.
+* **Side-by-Side Table & Visual Diffs**: Upgraded the prompt models to request before/after visual state representations, rendering table cell modifications and layout shifts in adjacent cards.
+* **Visual Theme Redesign (AlloCap 2.0)**: Transitioned UI components to the modern corporate light theme using AlloCap brand HSL colors (Cobalt Navy, Cyber Teal, and Emerald Green).
+* **Storage Drawer & Condensed Layouts**: Replaced large file elements with condensed file rows and added file deletion capabilities.
+* **Collapsible Navigation Sidebar**: Supported collapsing the entire left sidebar using a hamburger header button, transitioning the file storage drawer in sync with it.
+* **Direct Dropdown Slots**: Reconfigured Slot A & Slot B selection slots to contain direct select dropdown menus for instantly selecting files.
+* **Display Name Prefix Cleanup**: Modified the backend display name generation to strip Multer-injected timestamps and random digits.
+* **Word-Level Diff Engine**: Developed the token-based LCS diff algorithm to highlight deleted words (soft red) and added words (soft teal/yellow) in `'Plus Jakarta Sans'` prose font, wrapping descriptions in left severity borders.
+
+### 📅 June 12, 2026: Report Publisher & Developer Integration
+* **Audit Report Publisher**: Implemented the formal simulated A4 sheet preview page with customized headers and metadata tables, along with settings controllers in the sidebar.
+* **SharePoint Export Exporter**: Built the rich HTML clipboard copy pipeline to format diff highlights and metadata tables for direct pasting into Microsoft Word and SharePoint wikis.
+* **Preserved Print Colors**: Added CSS media overrides (`print-color-adjust: exact`) to force browsers to preserve soft-red and yellow text highlights during PDF print generation.
+* **Rendered Markdown Viewer**: Replaced the raw markdown block with a beautifully parsed, styled, and read-only markdown document view.
+* **Contextual Potential Impacts**: Renamed recommendations to potential impacts, enforcing exactly two sentences of compliance/liability/risk impact from Gemini.
+* **Dynamic Section Numbering**: Built the real-time sequential section numbering system for HTML, copied rich-text, and GFM markdown exports.
+* **Comparison Terminology Normalization**: Replaced all "Audit" terms with "Comparison" and resolved the naming convention mismatch by renaming PCC references to PCG (Public Consulting Group).
+* **Database Integration Dashboard**: Added JSON ingestion payloads and PostgreSQL transactional script visualizers, stacking them vertically for clean horizontal reading.
+
+### 📅 June 22, 2026: Pipeline Scale, Safety, & Usability
+* **Page-by-Page Batched Pipeline (Thorough Mode)**: Re-architected `compareAgent.ts` to query page counts and scan pages concurrently (limit = 3), bypassing LLM output tokens limit for large files.
+* **Strict Document Alignment Validator**: Added a structured schema-checked pre-verification validator to verify that uploaded documents are versions/revisions of the exact same agreement, rejecting mismatched files.
+* **PDF Tab Print Isolation**: Modified print stylesheets in `index.css` to hide all screen layouts (`display: none !important`) by default, forcing only `#printable-report` to display during print.
+* **Risk Rating Cleanup**: Removed risk ratings and replaced them with "Prepared By: Anthony Luu" across HTML, Markdown, Copy HTML, and JSON/SQL database formats.
+* **Workspace Inline Warning Card**: Replaced generic browser alert popups with a styled, dismissible warning banner inside the comparison dashboard.
