@@ -450,15 +450,11 @@ h1, h2, h3, h4, h5 {
     width: 100% !important;
     max-width: 100% !important;
     min-height: auto !important;
-    display: block !important;
+    display: none !important; /* Hide all sheets by default under print media */
   }
 
-  .report-paper-page.hidden-screen {
-    display: block !important; /* Force HTML preview to print */
-  }
-
-  .markdown-preview-block, .database-preview-block {
-    display: none !important; /* Never print markdown or database code */
+  #printable-report {
+    display: block !important; /* Always display the HTML printable report on print */
   }
 
   .print-section {

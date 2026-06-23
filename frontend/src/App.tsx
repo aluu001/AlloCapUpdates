@@ -388,14 +388,20 @@ export default function App() {
   const [includeTextChanges, setIncludeTextChanges] = useState(true);
   const [includeTableChanges, setIncludeTableChanges] = useState(true);
   const [includeVisualChanges, setIncludeVisualChanges] = useState(true);
+  const [showPotentialImpact, setShowPotentialImpact] = useState(true);
+  const [comparisonMode, setComparisonMode] = useState<'standard' | 'thorough'>('standard');
   const [isCopied, setIsCopied] = useState(false);
   const [isCopiedMd, setIsCopiedMd] = useState(false);
-  const [publisherViewMode, setPublisherViewMode] = useState<'html' | 'markdown' | 'database'>('html');
+  const [publisherViewMode, setPublisherViewMode] = useState<'html' | 'markdown' | 'database' | 'interactive'>('html');
   const [isCopiedJson, setIsCopiedJson] = useState(false);
   const [isCopiedSql, setIsCopiedSql] = useState(false);
   const [dbJson, setDbJson] = useState('');
   const [dbSql, setDbSql] = useState('');
   const [isRefreshingDb, setIsRefreshingDb] = useState(false);
+  const [changeChats, setChangeChats] = useState<Record<string, ChatMessage[]>>({});
+  const [changeInputs, setChangeInputs] = useState<Record<string, string>>({});
+  const [changeLoading, setChangeLoading] = useState<Record<string, boolean>>({});
+  const [expandedExplainer, setExpandedExplainer] = useState<Record<string, boolean>>({});
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
@@ -657,7 +663,7 @@ export default function App() {
       setDbJson(generateJSONPayload());
       setDbSql(generateSQLScript());
     }
-  }, [report, publisherTitle, auditDate, auditNotes, includeTextChanges, includeTableChanges, includeVisualChanges]);
+  }, [report, publisherTitle, auditDate, auditNotes, includeTextChanges, includeTableChanges, includeVisualChanges, showPotentialImpact]);
 
   const handleRefreshDatabaseExport = () => {
     setIsRefreshingDb(true);
@@ -666,6 +672,163 @@ export default function App() {
       setDbSql(generateSQLScript());
       setIsRefreshingDb(false);
     }, 400);
+  };
+
+  const getSemanticDetails = (description: string = '', originalText: string = '', revisedText: string = '', severity: string = '', type: string = '') => {
+    const descLower = description.toLowerCase();
+    const origLower = (originalText || '').toLowerCase();
+    const revLower = (revisedText || '').toLowerCase();
+    const textCombo = `${descLower} ${origLower} ${revLower}`;
+
+    let category = 'Stylistic & Clarification';
+    let categoryDesc = 'Refines clause descriptions or updates definitions without altering basic duties.';
+    let icon = '📝';
+    let color = '#475569';
+    let bg = '#f1f5f9';
+
+    let obligation = 'Obligation Neutral';
+    let obligationIcon = '🔄';
+    let obligationColor = '#475569';
+
+    // Categories
+    if (textCombo.includes('late fee') || textCombo.includes('billing') || textCombo.includes('payment') || textCombo.includes('rate') || textCombo.includes('price') || textCombo.includes('cost') || textCombo.includes('dollar') || textCombo.includes('rent') || textCombo.includes('$') || textCombo.includes('amount') || textCombo.includes('interest')) {
+      category = 'Financial Liability';
+      categoryDesc = 'Affects billing rate, payment obligation, rent costs, or currency terms.';
+      icon = '💼';
+      color = '#007E9E';
+      bg = 'rgba(0, 126, 158, 0.08)';
+    } else if (textCombo.includes('date') || textCombo.includes('period') || textCombo.includes('day') || textCombo.includes('days') || textCombo.includes('month') || textCombo.includes('timeline') || textCombo.includes('schedule') || textCombo.includes('calendar') || textCombo.includes('term') || textCombo.includes('duration') || textCombo.includes('renew') || textCombo.includes('grace')) {
+      category = 'Operational Timeline';
+      categoryDesc = 'Adjusts operational timelines, lease durations, grace periods, or schedules.';
+      icon = '⏱️';
+      color = '#21874c';
+      bg = 'rgba(33, 135, 76, 0.08)';
+    } else if (textCombo.includes('indemni') || textCombo.includes('liability') || textCombo.includes('legal') || textCombo.includes('law') || textCombo.includes('breach') || textCombo.includes('force majeure') || textCombo.includes('jurisdiction') || textCombo.includes('court') || textCombo.includes('govern') || textCombo.includes('arbitration') || textCombo.includes('dispute') || textCombo.includes('severability')) {
+      category = 'Legal & Liability Shift';
+      categoryDesc = 'Modifies legal risk allocation, indemnification, or legal governance clauses.';
+      icon = '⚖️';
+      color = '#015294';
+      bg = 'rgba(1, 82, 148, 0.08)';
+    } else if (textCombo.includes('logo') || textCombo.includes('font') || textCombo.includes('spacing') || textCombo.includes('layout') || textCombo.includes('column') || textCombo.includes('look') || textCombo.includes('style') || textCombo.includes('format') || textCombo.includes('color') || textCombo.includes('chart') || textCombo.includes('diagram') || textCombo.includes('image') || textCombo.includes('visual')) {
+      category = 'Visual & Aesthetic';
+      categoryDesc = 'Alters logo placement, typography styles, layout formatting, or charts.';
+      icon = '🎨';
+      color = '#a21caf';
+      bg = 'rgba(162, 28, 175, 0.08)';
+    }
+
+    // Obligation Shift
+    const isHighMed = severity === 'high' || severity === 'medium';
+    if (type === 'added' || type === 'modified' || type === 'row_added' || type === 'value_modified') {
+      if (isHighMed) {
+        obligation = 'Burden Increased';
+        obligationIcon = '📈';
+        obligationColor = '#dc2626';
+      } else {
+        obligation = 'Minor Obligation Shift';
+        obligationIcon = '↗️';
+        obligationColor = '#d97706';
+      }
+    } else if (type === 'deleted' || type === 'row_deleted') {
+      obligation = 'Obligation Reduced';
+      obligationIcon = '📉';
+      obligationColor = '#16a34a';
+    }
+
+    return { category, categoryDesc, icon, color, bg, obligation, obligationIcon, obligationColor };
+  };
+
+  const handleSendChangeMessage = async (cardKey: string, questionText: string, category: string, change: any) => {
+    if (!questionText.trim() || !fileA || !fileB) return;
+
+    const userMsg = { role: 'user' as const, content: questionText };
+    setChangeChats(prev => ({
+      ...prev,
+      [cardKey]: [...(prev[cardKey] || []), userMsg]
+    }));
+
+    setChangeInputs(prev => ({
+      ...prev,
+      [cardKey]: ''
+    }));
+
+    setChangeLoading(prev => ({
+      ...prev,
+      [cardKey]: true
+    }));
+
+    const customPrompt = `Regarding this specific document difference:
+- Category: ${category}
+- Page: ${change.page}
+- Description: ${change.description}
+- Original Text: ${change.originalText || "N/A"}
+- Revised Text: ${change.revisedText || "N/A"}
+- Potential Impact: ${change.potentialImpact || "N/A"}
+
+User question about this specific difference: ${questionText}`;
+
+    if (isDemoMode) {
+      setTimeout(() => {
+        let reply = `Based on the document context, this revision represents a shift in terms. Let me know if you would like me to analyze liability or operational impact in detail.`;
+        const lowQ = questionText.toLowerCase();
+        if (lowQ.includes('risk') || lowQ.includes('liability')) {
+          reply = `From a risk standpoint, this change is classified as ${change.severity} severity. The potential impact is: "${change.potentialImpact || 'No specific impact logged.'}" It may require operational review.`;
+        } else if (lowQ.includes('summarize') || lowQ.includes('simple')) {
+          reply = `In simple terms: The original document state "${change.originalText || '[None]'}" was replaced with "${change.revisedText || '[None]'}" because of the following change: "${change.description}".`;
+        } else if (lowQ.includes('why') || lowQ.includes('reason')) {
+          reply = `This change is part of the document revisions to update terms. The description states: "${change.description}".`;
+        }
+        const agentMsg = { role: 'agent' as const, content: reply };
+        setChangeChats(prev => ({
+          ...prev,
+          [cardKey]: [...(prev[cardKey] || []), agentMsg]
+        }));
+        setChangeLoading(prev => ({
+          ...prev,
+          [cardKey]: false
+        }));
+      }, 1000);
+      return;
+    }
+
+    try {
+      const res = await fetch(`${API_BASE}/chat`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          filenameA: fileA,
+          filenameB: fileB,
+          messages: changeChats[cardKey] || [],
+          message: customPrompt
+        })
+      });
+
+      const data = await res.json();
+      if (res.ok && data.reply) {
+        const agentMsg = { role: 'agent' as const, content: data.reply };
+        setChangeChats(prev => ({
+          ...prev,
+          [cardKey]: [...(prev[cardKey] || []), agentMsg]
+        }));
+      } else {
+        const errorMsg = { role: 'agent' as const, content: `Error: ${data.error || "Failed to get response."}` };
+        setChangeChats(prev => ({
+          ...prev,
+          [cardKey]: [...(prev[cardKey] || []), errorMsg]
+        }));
+      }
+    } catch (err) {
+      const errorMsg = { role: 'agent' as const, content: "Error communicating with comparison chatbot backend." };
+      setChangeChats(prev => ({
+        ...prev,
+        [cardKey]: [...(prev[cardKey] || []), errorMsg]
+      }));
+    } finally {
+      setChangeLoading(prev => ({
+        ...prev,
+        [cardKey]: false
+      }));
+    }
   };
 
   // Upload handler
@@ -781,7 +944,7 @@ export default function App() {
       const response = await fetch(`${API_BASE}/compare`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ filenameA: fileA, filenameB: fileB })
+        body: JSON.stringify({ filenameA: fileA, filenameB: fileB, mode: comparisonMode })
       });
 
       if (!response.body) {
@@ -977,9 +1140,9 @@ export default function App() {
             <td style="padding: 10px; border: 1px solid #cbd5e1; color: #0f172a;">${escapeHtml(auditDate)}</td>
           </tr>
           <tr>
-            <td style="padding: 10px; border: 1px solid #cbd5e1; font-weight: bold; color: #475569;">Risk Rating</td>
-            <td style="padding: 10px; border: 1px solid #cbd5e1; color: ${getSeverityColorHex(report.riskRating)}; font-weight: bold; text-transform: uppercase;">
-              ${report.riskRating} RISK
+            <td style="padding: 10px; border: 1px solid #cbd5e1; font-weight: bold; color: #475569;">Prepared By</td>
+            <td style="padding: 10px; border: 1px solid #cbd5e1; color: #0f172a;">
+              Anthony Luu
             </td>
           </tr>
         </table>
@@ -1018,7 +1181,7 @@ export default function App() {
                   </td>
                 </tr>
               </table>
-              ${change.potentialImpact ? `
+              ${showPotentialImpact && change.potentialImpact ? `
                 <div style="margin-top: 10px; padding: 8px 12px; background-color: #f8fafc; border-left: 3px solid #007E9E; font-size: 12px; color: #475569;">
                   <strong>💡 Context & Potential Impact:</strong> ${escapeHtml(change.potentialImpact)}
                 </div>
@@ -1058,7 +1221,7 @@ export default function App() {
                   </td>
                 </tr>
               </table>
-              ${change.potentialImpact ? `
+              ${showPotentialImpact && change.potentialImpact ? `
                 <div style="margin-top: 10px; padding: 8px 12px; background-color: #f8fafc; border-left: 3px solid #007E9E; font-size: 12px; color: #475569;">
                   <strong>💡 Context & Potential Impact:</strong> ${escapeHtml(change.potentialImpact)}
                 </div>
@@ -1098,7 +1261,7 @@ export default function App() {
                   </td>
                 </tr>
               </table>
-              ${change.potentialImpact ? `
+              ${showPotentialImpact && change.potentialImpact ? `
                 <div style="margin-top: 10px; padding: 8px 12px; background-color: #f8fafc; border-left: 3px solid #007E9E; font-size: 12px; color: #475569;">
                   <strong>💡 Context & Potential Impact:</strong> ${escapeHtml(change.potentialImpact)}
                 </div>
@@ -1176,7 +1339,7 @@ export default function App() {
     md += `**Original File:** ${files.find(f => f.filename === fileA)?.displayName || fileA || ''}\n`;
     md += `**Revised File:** ${files.find(f => f.filename === fileB)?.displayName || fileB || ''}\n`;
     md += `**Comparison Date:** ${auditDate}\n`;
-    md += `**Risk Rating:** ${report.riskRating.toUpperCase()} RISK\n\n`;
+    md += `**Prepared By:** Anthony Luu\n\n`;
     md += `---\n\n`;
 
     md += `## 1. Executive Summary\n`;
@@ -1196,7 +1359,7 @@ export default function App() {
           if (change.type !== 'deleted') {
             md += `* **Revised Text:** ${change.revisedText || ''}\n`;
           }
-          if (change.potentialImpact) {
+          if (showPotentialImpact && change.potentialImpact) {
             md += `* **💡 Context & Potential Impact:** ${change.potentialImpact}\n`;
           }
           md += `\n`;
@@ -1218,7 +1381,7 @@ export default function App() {
           if (change.revisedText) {
             md += `* **Revised Table Entry:** ${change.revisedText}\n`;
           }
-          if (change.potentialImpact) {
+          if (showPotentialImpact && change.potentialImpact) {
             md += `* **💡 Context & Potential Impact:** ${change.potentialImpact}\n`;
           }
           md += `\n`;
@@ -1240,7 +1403,7 @@ export default function App() {
           if (change.revisedText) {
             md += `* **Revised Visual Layout:** ${change.revisedText}\n`;
           }
-          if (change.potentialImpact) {
+          if (showPotentialImpact && change.potentialImpact) {
             md += `* **💡 Context & Potential Impact:** ${change.potentialImpact}\n`;
           }
           md += `\n`;
@@ -1289,7 +1452,7 @@ export default function App() {
         originalDocument: files.find(f => f.filename === fileA)?.displayName || fileA || '',
         revisedDocument: files.find(f => f.filename === fileB)?.displayName || fileB || '',
         comparisonDate: auditDate,
-        riskRating: report.riskRating,
+        preparedBy: 'Anthony Luu',
         overallSummary: report.overallSummary,
         comparisonNotes: auditNotes
       },
@@ -1302,7 +1465,7 @@ export default function App() {
           originalText: c.originalText || null,
           revisedText: c.revisedText || null,
           severity: c.severity,
-          potentialImpact: c.potentialImpact || null
+          potentialImpact: showPotentialImpact ? (c.potentialImpact || null) : null
         })) : []),
         ...(includeTableChanges ? report.tableChanges.map(c => ({
           category: 'table',
@@ -1313,7 +1476,7 @@ export default function App() {
           originalText: c.originalText || null,
           revisedText: c.revisedText || null,
           severity: c.severity,
-          potentialImpact: c.potentialImpact || null
+          potentialImpact: showPotentialImpact ? (c.potentialImpact || null) : null
         })) : []),
         ...(includeVisualChanges ? report.visualChanges.map(c => ({
           category: 'visual',
@@ -1323,7 +1486,7 @@ export default function App() {
           originalText: c.originalText || null,
           revisedText: c.revisedText || null,
           severity: c.severity,
-          potentialImpact: c.potentialImpact || null
+          potentialImpact: showPotentialImpact ? (c.potentialImpact || null) : null
         })) : [])
       ]
     };
@@ -1350,13 +1513,13 @@ export default function App() {
     sql += `BEGIN;\n\n`;
     
     sql += `-- 1. Insert the Comparison Run record\n`;
-    sql += `INSERT INTO document_comparisons (report_title, original_document, revised_document, comparison_date, risk_rating, overall_summary, comparison_notes)\n`;
+    sql += `INSERT INTO document_comparisons (report_title, original_document, revised_document, comparison_date, prepared_by, overall_summary, comparison_notes)\n`;
     sql += `VALUES (\n`;
     sql += `    ${escapeSQL(publisherTitle)},\n`;
     sql += `    ${escapeSQL(origDoc)},\n`;
     sql += `    ${escapeSQL(revDoc)},\n`;
     sql += `    ${escapeSQL(auditDate)},\n`;
-    sql += `    ${escapeSQL(report.riskRating)},\n`;
+    sql += `    'Anthony Luu',\n`;
     sql += `    ${escapeSQL(report.overallSummary)},\n`;
     sql += `    ${escapeSQL(auditNotes)}\n`;
     sql += `);\n\n`;
@@ -1373,21 +1536,21 @@ export default function App() {
     if (includeTextChanges) {
       report.textChanges.forEach(c => {
         inserts += `    INSERT INTO comparison_change_entries (comparison_id, change_category, page, change_type, table_name, description, original_text, revised_text, severity, potential_impact)\n`;
-        inserts += `    VALUES (v_comparison_id, 'text', ${escapeSQL(c.page)}, ${escapeSQL(c.type)}, NULL, ${escapeSQL(c.description)}, ${escapeSQL(c.originalText)}, ${escapeSQL(c.revisedText)}, ${escapeSQL(c.severity)}, ${escapeSQL(c.potentialImpact)});\n\n`;
+        inserts += `    VALUES (v_comparison_id, 'text', ${escapeSQL(c.page)}, ${escapeSQL(c.type)}, NULL, ${escapeSQL(c.description)}, ${escapeSQL(c.originalText)}, ${escapeSQL(c.revisedText)}, ${escapeSQL(c.severity)}, ${escapeSQL(showPotentialImpact ? c.potentialImpact : null)});\n\n`;
       });
     }
 
     if (includeTableChanges) {
       report.tableChanges.forEach(c => {
         inserts += `    INSERT INTO comparison_change_entries (comparison_id, change_category, page, change_type, table_name, description, original_text, revised_text, severity, potential_impact)\n`;
-        inserts += `    VALUES (v_comparison_id, 'table', ${escapeSQL(c.page)}, ${escapeSQL(c.type)}, ${escapeSQL(c.tableName)}, ${escapeSQL(c.description)}, ${escapeSQL(c.originalText)}, ${escapeSQL(c.revisedText)}, ${escapeSQL(c.severity)}, ${escapeSQL(c.potentialImpact)});\n\n`;
+        inserts += `    VALUES (v_comparison_id, 'table', ${escapeSQL(c.page)}, ${escapeSQL(c.type)}, ${escapeSQL(c.tableName)}, ${escapeSQL(c.description)}, ${escapeSQL(c.originalText)}, ${escapeSQL(c.revisedText)}, ${escapeSQL(c.severity)}, ${escapeSQL(showPotentialImpact ? c.potentialImpact : null)});\n\n`;
       });
     }
 
     if (includeVisualChanges) {
       report.visualChanges.forEach(c => {
         inserts += `    INSERT INTO comparison_change_entries (comparison_id, change_category, page, change_type, table_name, description, original_text, revised_text, severity, potential_impact)\n`;
-        inserts += `    VALUES (v_comparison_id, 'visual', ${escapeSQL(c.page)}, ${escapeSQL(c.type)}, NULL, ${escapeSQL(c.description)}, ${escapeSQL(c.originalText)}, ${escapeSQL(c.revisedText)}, ${escapeSQL(c.severity)}, ${escapeSQL(c.potentialImpact)});\n\n`;
+        inserts += `    VALUES (v_comparison_id, 'visual', ${escapeSQL(c.page)}, ${escapeSQL(c.type)}, NULL, ${escapeSQL(c.description)}, ${escapeSQL(c.originalText)}, ${escapeSQL(c.revisedText)}, ${escapeSQL(c.severity)}, ${escapeSQL(showPotentialImpact ? c.potentialImpact : null)});\n\n`;
       });
     }
 
@@ -1942,6 +2105,57 @@ export default function App() {
                   </div>
                 </div>
 
+                {/* Comparison Mode Selector */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: '14px' }}>
+                  <label style={{ fontSize: '11px', fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Comparison Mode</label>
+                  <div style={{ display: 'flex', background: '#f1f5f9', borderRadius: '6px', padding: '3px', border: '1px solid #e2e8f0' }}>
+                    <button
+                      onClick={() => setComparisonMode('standard')}
+                      disabled={isLoading}
+                      style={{
+                        flex: 1,
+                        padding: '6px 12px',
+                        border: 'none',
+                        borderRadius: '4px',
+                        fontSize: '12px',
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                        background: comparisonMode === 'standard' ? '#ffffff' : 'transparent',
+                        color: comparisonMode === 'standard' ? '#015294' : '#64748b',
+                        boxShadow: comparisonMode === 'standard' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+                        transition: 'all 0.2s'
+                      }}
+                    >
+                      Standard (Fast)
+                    </button>
+                    <button
+                      onClick={() => setComparisonMode('thorough')}
+                      disabled={isLoading}
+                      style={{
+                        flex: 1,
+                        padding: '6px 12px',
+                        border: 'none',
+                        borderRadius: '4px',
+                        fontSize: '12px',
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                        background: comparisonMode === 'thorough' ? '#ffffff' : 'transparent',
+                        color: comparisonMode === 'thorough' ? '#015294' : '#64748b',
+                        boxShadow: comparisonMode === 'thorough' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+                        transition: 'all 0.2s'
+                      }}
+                    >
+                      Thorough (Page-by-Page)
+                    </button>
+                  </div>
+                  <p style={{ fontSize: '10.5px', color: '#64748b', margin: '2px 0 0', fontStyle: 'italic', textAlign: 'center' }}>
+                    {comparisonMode === 'standard' 
+                      ? "Fast single-pass analysis; ideal for most documents."
+                      : "Exhaustive page-by-page scan; ideal for detecting every character-level difference."
+                    }
+                  </p>
+                </div>
+
                 {/* Main Action Button */}
                 <button 
                   onClick={handleCompare}
@@ -2140,22 +2354,21 @@ export default function App() {
                             </div>
 
                             <div className="glass-card" style={{ padding: '16px', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', gap: '8px', background: '#f8fafc' }}>
-                              <h4 style={{ fontSize: '11px', textTransform: 'uppercase', color: '#64748b', fontWeight: 600 }}>Risk Rating</h4>
+                              <h4 style={{ fontSize: '11px', textTransform: 'uppercase', color: '#64748b', fontWeight: 600 }}>Prepared By</h4>
                               <div 
                                 style={{ 
-                                  fontSize: '18px', 
+                                  fontSize: '15px', 
                                   fontWeight: 800, 
-                                  textTransform: 'uppercase', 
-                                  color: getSeverityColor(report.riskRating),
-                                  border: `2px solid ${getSeverityColor(report.riskRating)}`,
+                                  color: '#015294',
+                                  border: `2px solid #015294`,
                                   padding: '4px 16px',
                                   borderRadius: '20px',
                                   background: '#ffffff'
                                 }}
                               >
-                                {report.riskRating}
+                                Anthony Luu
                               </div>
-                              <span style={{ fontSize: '10px', color: '#64748b' }}>Based on clause shifts</span>
+                              <span style={{ fontSize: '10px', color: '#64748b' }}>Report Lead</span>
                             </div>
                           </div>
 
@@ -2229,7 +2442,7 @@ export default function App() {
                                     )}
                                   </div>
                                 </div>
-                                {change.potentialImpact && (
+                                {showPotentialImpact && change.potentialImpact && (
                                   <div style={{ marginTop: '12px', padding: '10px 14px', background: 'rgba(0, 126, 158, 0.04)', border: '1px solid rgba(0, 126, 158, 0.15)', borderRadius: '6px', textAlign: 'left' }}>
                                     <div style={{ fontSize: '10px', fontWeight: 700, color: '#007E9E', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '4px' }}>💡 Context & Potential Impact</div>
                                     <p style={{ fontSize: '12px', color: '#334155', margin: 0, lineHeight: 1.4 }}>{change.potentialImpact}</p>
@@ -2295,7 +2508,7 @@ export default function App() {
                                     )}
                                   </div>
                                 </div>
-                                {change.potentialImpact && (
+                                {showPotentialImpact && change.potentialImpact && (
                                   <div style={{ marginTop: '12px', padding: '10px 14px', background: 'rgba(0, 126, 158, 0.04)', border: '1px solid rgba(0, 126, 158, 0.15)', borderRadius: '6px', textAlign: 'left' }}>
                                     <div style={{ fontSize: '10px', fontWeight: 700, color: '#007E9E', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '4px' }}>💡 Context & Potential Impact</div>
                                     <p style={{ fontSize: '12px', color: '#334155', margin: 0, lineHeight: 1.4 }}>{change.potentialImpact}</p>
@@ -2358,7 +2571,7 @@ export default function App() {
                                     )}
                                   </div>
                                 </div>
-                                {change.potentialImpact && (
+                                {showPotentialImpact && change.potentialImpact && (
                                   <div style={{ marginTop: '12px', padding: '10px 14px', background: 'rgba(0, 126, 158, 0.04)', border: '1px solid rgba(0, 126, 158, 0.15)', borderRadius: '6px', textAlign: 'left' }}>
                                     <div style={{ fontSize: '10px', fontWeight: 700, color: '#007E9E', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '4px' }}>💡 Context & Potential Impact</div>
                                     <p style={{ fontSize: '12px', color: '#334155', margin: 0, lineHeight: 1.4 }}>{change.potentialImpact}</p>
@@ -2450,6 +2663,17 @@ export default function App() {
                         style={{ cursor: 'pointer' }}
                       />
                       <span>Visual Modifications ({report.visualChanges.length})</span>
+                    </label>
+
+                    <span style={{ fontSize: '11px', fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.5px', marginTop: '8px', borderTop: '1px solid #e2e8f0', paddingTop: '10px' }}>Display Settings</span>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12.5px', cursor: 'pointer' }}>
+                      <input 
+                        type="checkbox" 
+                        checked={showPotentialImpact}
+                        onChange={(e) => setShowPotentialImpact(e.target.checked)}
+                        style={{ cursor: 'pointer' }}
+                      />
+                      <span>Show Potential Impact</span>
                     </label>
                   </div>
 
@@ -2554,6 +2778,26 @@ export default function App() {
                     >
                       ⚙️ Database Export
                     </button>
+                    <button 
+                      onClick={() => setPublisherViewMode('interactive')}
+                      style={{
+                        padding: '6px 16px',
+                        borderRadius: '6px',
+                        border: 'none',
+                        fontSize: '12px',
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                        background: publisherViewMode === 'interactive' ? '#015294' : 'transparent',
+                        color: publisherViewMode === 'interactive' ? '#ffffff' : '#64748b',
+                        boxShadow: publisherViewMode === 'interactive' ? '0 1px 3px rgba(0,0,0,0.15)' : 'none',
+                        transition: 'all 0.2s',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px'
+                      }}
+                    >
+                      AlloCap AI
+                    </button>
                   </div>
 
                   {/* HTML Report Sheet (always rendered, hidden on screen if in markdown mode) */}
@@ -2599,19 +2843,8 @@ export default function App() {
                         <span style={{ color: '#0f172a', fontWeight: 500 }}>{auditDate}</span>
                       </div>
                       <div>
-                        <span style={{ fontWeight: 600, color: '#475569', display: 'block', textTransform: 'uppercase', fontSize: '9.5px', letterSpacing: '0.5px' }}>Risk Rating</span>
-                        <span style={{ 
-                          color: getSeverityColor(report.riskRating), 
-                          fontWeight: 700, 
-                          textTransform: 'uppercase', 
-                          fontSize: '11px',
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '4px'
-                        }}>
-                          <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: getSeverityColor(report.riskRating) }}></span>
-                          {report.riskRating} Risk
-                        </span>
+                        <span style={{ fontWeight: 600, color: '#475569', display: 'block', textTransform: 'uppercase', fontSize: '9.5px', letterSpacing: '0.5px' }}>Prepared By</span>
+                        <span style={{ color: '#0f172a', fontWeight: 500 }}>Anthony Luu</span>
                       </div>
                     </div>
 
@@ -2662,7 +2895,7 @@ export default function App() {
                                     )}
                                   </div>
                                 </div>
-                                {change.potentialImpact && (
+                                {showPotentialImpact && change.potentialImpact && (
                                   <div style={{ marginTop: '8px', padding: '6px 10px', background: '#f8fafc', borderLeft: '3px solid #007E9E', fontSize: '11.5px', color: '#4b5563', fontStyle: 'italic' }}>
                                     <strong>Potential Impact:</strong> {change.potentialImpact}
                                   </div>
@@ -2713,7 +2946,7 @@ export default function App() {
                                     )}
                                   </div>
                                 </div>
-                                {change.potentialImpact && (
+                                {showPotentialImpact && change.potentialImpact && (
                                   <div style={{ marginTop: '8px', padding: '6px 10px', background: '#f8fafc', borderLeft: '3px solid #007E9E', fontSize: '11.5px', color: '#4b5563', fontStyle: 'italic' }}>
                                     <strong>Potential Impact:</strong> {change.potentialImpact}
                                   </div>
@@ -2764,7 +2997,7 @@ export default function App() {
                                     )}
                                   </div>
                                 </div>
-                                {change.potentialImpact && (
+                                {showPotentialImpact && change.potentialImpact && (
                                   <div style={{ marginTop: '8px', padding: '6px 10px', background: '#f8fafc', borderLeft: '3px solid #007E9E', fontSize: '11.5px', color: '#4b5563', fontStyle: 'italic' }}>
                                     <strong>Potential Impact:</strong> {change.potentialImpact}
                                   </div>
@@ -3041,6 +3274,642 @@ export default function App() {
                         </div>
                       </div>
                     </div>
+                  </div>
+
+                  {/* Interactive AI Analyst Sheet (always rendered, hidden on screen if not in interactive mode, never printed) */}
+                  <div 
+                    className={`report-paper-page interactive-preview-block ${publisherViewMode === 'interactive' ? '' : 'hidden-screen'}`}
+                    style={{ background: '#ffffff', border: '1px solid #cbd5e1', borderRadius: '4px', boxShadow: '0 8px 30px rgba(0, 0, 0, 0.08)', padding: '40px 50px', width: '100%', maxWidth: '800px', display: 'flex', flexDirection: 'column', gap: '20px' }}
+                  >
+                    
+                    {/* Header */}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '2px solid #002A5D', paddingBottom: '16px' }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                        <h1 style={{ fontSize: '22px', color: '#002A5D', fontWeight: 800, margin: 0 }}>{publisherTitle}</h1>
+                        <p style={{ fontSize: '12px', color: '#475569', margin: 0 }}>Interactive AI-Assisted Document Comparison Analyst & Smart Viewer</p>
+                      </div>
+                      
+                      {/* PCG Columns Logo */}
+                      <div style={{ flexShrink: 0 }}>
+                        <svg width="150" height="40" viewBox="0 0 180 35" fill="none" xmlns="http://www.w3.org/2000/svg">
+                          <g transform="translate(0, 2)">
+                            <rect x="2" y="26" width="26" height="3" rx="0.5" fill="#002A5D" />
+                            <rect x="4" y="24" width="22" height="2" rx="0.5" fill="#002A5D" />
+                            <path d="M15 2L3 8H27L15 2Z" fill="#002A5D" />
+                            <rect x="5" y="8" width="20" height="2" fill="#002A5D" />
+                            <rect x="7" y="10" width="3" height="14" fill="#002A5D" />
+                            <rect x="13" y="10" width="4" height="14" fill="#002A5D" />
+                            <rect x="20" y="10" width="3" height="14" fill="#002A5D" />
+                          </g>
+                          <text x="38" y="18" fill="#002A5D" fontFamily="'Raleway', sans-serif" fontSize="11" fontWeight="700" letterSpacing="1">PUBLIC</text>
+                          <text x="38" y="28" fill="#64748b" fontFamily="'Raleway', sans-serif" fontSize="8" fontWeight="500" letterSpacing="1.5">CONSULTING GROUP</text>
+                        </svg>
+                      </div>
+                    </div>
+
+                    {/* Metadata Grid */}
+                    <div style={{ background: '#f8fafc', border: '1px solid #cbd5e1', borderRadius: '4px', padding: '16px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px 24px', fontSize: '12px' }}>
+                      <div>
+                        <span style={{ fontWeight: 600, color: '#475569', display: 'block', textTransform: 'uppercase', fontSize: '9.5px', letterSpacing: '0.5px' }}>Original Document</span>
+                        <span style={{ color: '#0f172a', fontWeight: 500, wordBreak: 'break-all' }}>{files.find(f => f.filename === fileA)?.displayName || fileA}</span>
+                      </div>
+                      <div>
+                        <span style={{ fontWeight: 600, color: '#475569', display: 'block', textTransform: 'uppercase', fontSize: '9.5px', letterSpacing: '0.5px' }}>Revised Document</span>
+                        <span style={{ color: '#0f172a', fontWeight: 500, wordBreak: 'break-all' }}>{files.find(f => f.filename === fileB)?.displayName || fileB}</span>
+                      </div>
+                      <div>
+                        <span style={{ fontWeight: 600, color: '#475569', display: 'block', textTransform: 'uppercase', fontSize: '9.5px', letterSpacing: '0.5px' }}>Comparison Date</span>
+                        <span style={{ color: '#0f172a', fontWeight: 500 }}>{auditDate}</span>
+                      </div>
+                      <div>
+                        <span style={{ fontWeight: 600, color: '#475569', display: 'block', textTransform: 'uppercase', fontSize: '9.5px', letterSpacing: '0.5px' }}>Prepared By</span>
+                        <span style={{ color: '#0f172a', fontWeight: 500 }}>Anthony Luu</span>
+                      </div>
+                    </div>
+
+                    {/* Section 1: Executive Summary */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                      <h3 style={{ fontSize: '14px', color: '#002A5D', fontWeight: 700, borderBottom: '1px solid #e2e8f0', paddingBottom: '4px' }}>1. Executive Summary</h3>
+                      <p style={{ fontSize: '12.5px', color: '#334155', lineHeight: '1.6', margin: 0 }}>
+                        {report.overallSummary}
+                      </p>
+                    </div>
+
+                    {/* Section 2: Text Changes */}
+                    {includeTextChanges && (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                        <h3 style={{ fontSize: '14px', color: '#002A5D', fontWeight: 700, borderBottom: '1px solid #e2e8f0', paddingBottom: '4px' }}>{printSecText}. Text Modifications</h3>
+                        {report.textChanges.length === 0 ? (
+                          <p style={{ fontSize: '12px', color: '#64748b', fontStyle: 'italic', margin: 0 }}>No text modifications identified.</p>
+                        ) : (
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                            {report.textChanges.map((change, idx) => {
+                              const sem = getSemanticDetails(change.description, change.originalText, change.revisedText, change.severity, change.type);
+                              const cardKey = `text-${idx}`;
+                              return (
+                                <div key={idx} style={{ border: '1px solid #e2e8f0', borderRadius: '6px', padding: '16px', display: 'flex', flexDirection: 'column', gap: '10px', boxShadow: '0 1px 3px rgba(0,0,0,0.02)', textAlign: 'left' }}>
+                                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '11px', fontWeight: 600, color: '#475569', borderBottom: '1px solid #f1f5f9', paddingBottom: '6px' }}>
+                                    <span>Page {change.page} • Change #{idx + 1}</span>
+                                    <span style={{ color: getSeverityColor(change.severity), textTransform: 'uppercase', fontSize: '10px', background: 'rgba(0,0,0,0.02)', padding: '2px 6px', borderRadius: '4px' }}>{change.severity} Severity</span>
+                                  </div>
+                                  
+                                  <p style={{ fontSize: '12.5px', fontWeight: 600, color: '#0f172a', margin: 0, padding: '8px 12px', background: '#f8fafc', borderLeft: `3px solid ${getSeverityColor(change.severity)}`, borderRadius: '0 4px 4px 0', lineHeight: '1.4' }}>
+                                    {change.description}
+                                  </p>
+
+                                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginTop: '4px' }}>
+                                    {/* Original */}
+                                    <div className={change.type === 'added' ? '' : 'print-diff-box-removed'} style={{ background: change.type === 'added' ? 'transparent' : '#fef2f2', border: change.type === 'added' ? '1px dashed #cbd5e1' : '1px solid #fee2e2', padding: '10px', borderRadius: '4px' }}>
+                                      <div style={{ fontSize: '8.5px', fontWeight: 700, color: change.type === 'added' ? '#64748b' : '#ef4444', textTransform: 'uppercase', marginBottom: '6px' }}>Original</div>
+                                      {change.type === 'added' ? (
+                                        <span style={{ fontSize: '11px', color: '#94a3b8', fontStyle: 'italic' }}>[No text existed]</span>
+                                      ) : (
+                                        renderOriginalDiffText(change.originalText || '', change.revisedText || '')
+                                      )}
+                                    </div>
+                                    {/* Revised */}
+                                    <div className={change.type === 'deleted' ? '' : 'print-diff-box-added'} style={{ background: change.type === 'deleted' ? 'transparent' : '#f0fdf4', border: change.type === 'deleted' ? '1px dashed #cbd5e1' : '1px solid #dcfce7', padding: '10px', borderRadius: '4px' }}>
+                                      <div style={{ fontSize: '8.5px', fontWeight: 700, color: change.type === 'deleted' ? '#64748b' : '#21874c', textTransform: 'uppercase', marginBottom: '6px' }}>Revised</div>
+                                      {change.type === 'deleted' ? (
+                                        <span style={{ fontSize: '11px', color: '#94a3b8', fontStyle: 'italic' }}>[Clause deleted]</span>
+                                      ) : (
+                                        renderRevisedDiffText(change.originalText || '', change.revisedText || '')
+                                      )}
+                                    </div>
+                                  </div>
+                                  
+                                  {showPotentialImpact && (
+                                    <div style={{ marginTop: '4px', padding: '8px 12px', background: '#f0f9ff', borderLeft: '3px solid #0284c7', fontSize: '11.5px', color: '#0369a1', borderRadius: '0 4px 4px 0', lineHeight: '1.4' }}>
+                                      <strong>Potential Impact ({sem.category} - {sem.obligation}):</strong> {change.potentialImpact || "No potential impact analysis logged."}
+                                    </div>
+                                  )}
+
+                                  {/* AI Explainer */}
+                                  <div style={{ marginTop: '8px', borderTop: '1px solid #e2e8f0', paddingTop: '10px' }}>
+                                    <button 
+                                      onClick={() => setExpandedExplainer(prev => ({ ...prev, [cardKey]: !prev[cardKey] }))}
+                                      style={{
+                                        background: 'none',
+                                        border: 'none',
+                                        color: '#015294',
+                                        fontSize: '12px',
+                                        fontWeight: 600,
+                                        cursor: 'pointer',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        padding: '4px 8px',
+                                        borderRadius: '4px',
+                                        transition: 'background 0.2s',
+                                      }}
+                                      onMouseEnter={(e) => e.currentTarget.style.background = '#f1f5f9'}
+                                      onMouseLeave={(e) => e.currentTarget.style.background = 'none'}
+                                    >
+                                      <span>{expandedExplainer[cardKey] ? "Hide AlloCap AI" : "Ask AlloCap AI"}</span>
+                                    </button>
+
+                                    {expandedExplainer[cardKey] && (
+                                      <div style={{ background: '#f8fafc', border: '1px solid #cbd5e1', borderRadius: '6px', padding: '12px', marginTop: '8px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                                        {/* Chat Message Thread */}
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '180px', overflowY: 'auto', padding: '4px' }}>
+                                          {(changeChats[cardKey] || []).length === 0 ? (
+                                            <div style={{ fontSize: '11.5px', color: '#64748b', fontStyle: 'italic', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                              <span>Ask a question about this change, or choose a suggested prompt below to analyze its details.</span>
+                                            </div>
+                                          ) : (
+                                            (changeChats[cardKey] || []).map((msg, mIdx) => (
+                                              <div key={mIdx} style={{ display: 'flex', flexDirection: 'column', gap: '2px', alignSelf: msg.role === 'user' ? 'flex-end' : 'flex-start', maxWidth: '85%' }}>
+                                                <div style={{
+                                                  padding: '6px 10px',
+                                                  borderRadius: '8px',
+                                                  fontSize: '11.5px',
+                                                  lineHeight: '1.4',
+                                                  background: msg.role === 'user' ? '#015294' : '#e2e8f0',
+                                                  color: msg.role === 'user' ? '#ffffff' : '#1e293b',
+                                                  border: msg.role === 'user' ? 'none' : '1px solid #cbd5e1'
+                                                }}>
+                                                  {msg.content}
+                                                </div>
+                                                <span style={{ fontSize: '9px', color: '#94a3b8', alignSelf: msg.role === 'user' ? 'flex-end' : 'flex-start', marginLeft: '4px', marginRight: '4px' }}>
+                                                  {msg.role === 'user' ? 'You' : 'AlloCap AI'}
+                                                </span>
+                                              </div>
+                                            ))
+                                          )}
+                                          {changeLoading[cardKey] && (
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', alignSelf: 'flex-start', background: '#e2e8f0', padding: '6px 10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '11px', color: '#64748b' }}>
+                                              <span>AlloCap AI is thinking...</span>
+                                            </div>
+                                          )}
+                                        </div>
+
+                                        {/* Suggested Questions */}
+                                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                                          <button 
+                                            onClick={() => handleSendChangeMessage(cardKey, "Summarize this change in simple terms", sem.category, change)}
+                                            disabled={changeLoading[cardKey]}
+                                            style={{ background: '#ffffff', border: '1px solid #cbd5e1', borderRadius: '12px', padding: '4px 10px', fontSize: '10px', cursor: 'pointer', color: '#334155', fontWeight: 500, transition: 'all 0.15s' }}
+                                            onMouseEnter={(e) => e.currentTarget.style.borderColor = '#015294'}
+                                            onMouseLeave={(e) => e.currentTarget.style.borderColor = '#cbd5e1'}
+                                          >
+                                            Summarize change
+                                          </button>
+                                          <button 
+                                            onClick={() => handleSendChangeMessage(cardKey, "What is the operational risk or timeline impact of this shift?", sem.category, change)}
+                                            disabled={changeLoading[cardKey]}
+                                            style={{ background: '#ffffff', border: '1px solid #cbd5e1', borderRadius: '12px', padding: '4px 10px', fontSize: '10px', cursor: 'pointer', color: '#334155', fontWeight: 500, transition: 'all 0.15s' }}
+                                            onMouseEnter={(e) => e.currentTarget.style.borderColor = '#015294'}
+                                            onMouseLeave={(e) => e.currentTarget.style.borderColor = '#cbd5e1'}
+                                          >
+                                            Operational risk?
+                                          </button>
+                                          <button 
+                                            onClick={() => handleSendChangeMessage(cardKey, "Does this change increase legal liability or financial obligations?", sem.category, change)}
+                                            disabled={changeLoading[cardKey]}
+                                            style={{ background: '#ffffff', border: '1px solid #cbd5e1', borderRadius: '12px', padding: '4px 10px', fontSize: '10px', cursor: 'pointer', color: '#334155', fontWeight: 500, transition: 'all 0.15s' }}
+                                            onMouseEnter={(e) => e.currentTarget.style.borderColor = '#015294'}
+                                            onMouseLeave={(e) => e.currentTarget.style.borderColor = '#cbd5e1'}
+                                          >
+                                            How does this affect liability?
+                                          </button>
+                                        </div>
+
+                                        {/* Chat Input box */}
+                                        <div style={{ display: 'flex', gap: '6px' }}>
+                                          <input 
+                                            type="text" 
+                                            value={changeInputs[cardKey] || ''}
+                                            onChange={(e) => setChangeInputs(prev => ({ ...prev, [cardKey]: e.target.value }))}
+                                            onKeyDown={(e) => {
+                                              if (e.key === 'Enter') {
+                                                handleSendChangeMessage(cardKey, changeInputs[cardKey] || '', sem.category, change);
+                                              }
+                                            }}
+                                            placeholder="Ask a custom question..."
+                                            disabled={changeLoading[cardKey]}
+                                            style={{ flex: 1, padding: '6px 10px', borderRadius: '4px', border: '1px solid #cbd5e1', fontSize: '11.5px', background: '#ffffff', color: '#0f172a' }}
+                                          />
+                                          <button 
+                                            onClick={() => handleSendChangeMessage(cardKey, changeInputs[cardKey] || '', sem.category, change)}
+                                            disabled={changeLoading[cardKey] || !(changeInputs[cardKey] || '').trim()}
+                                            style={{
+                                              background: '#015294',
+                                              color: '#ffffff',
+                                              border: 'none',
+                                              padding: '6px 12px',
+                                              borderRadius: '4px',
+                                              fontSize: '11px',
+                                              fontWeight: 600,
+                                              cursor: 'pointer',
+                                              display: 'flex',
+                                              alignItems: 'center',
+                                              opacity: (changeLoading[cardKey] || !(changeInputs[cardKey] || '').trim()) ? 0.6 : 1
+                                            }}
+                                          >
+                                            Send
+                                          </button>
+                                        </div>
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Section 3: Table Changes */}
+                    {includeTableChanges && (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                        <h3 style={{ fontSize: '14px', color: '#002A5D', fontWeight: 700, borderBottom: '1px solid #e2e8f0', paddingBottom: '4px' }}>{printSecTable}. Table Modifications</h3>
+                        {report.tableChanges.length === 0 ? (
+                          <p style={{ fontSize: '12px', color: '#64748b', fontStyle: 'italic', margin: 0 }}>No table modifications identified.</p>
+                        ) : (
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                            {report.tableChanges.map((change, idx) => {
+                              const sem = getSemanticDetails(change.description, change.originalText, change.revisedText, change.severity, change.type);
+                              const cardKey = `table-${idx}`;
+                              return (
+                                <div key={idx} style={{ border: '1px solid #e2e8f0', borderRadius: '6px', padding: '16px', display: 'flex', flexDirection: 'column', gap: '10px', boxShadow: '0 1px 3px rgba(0,0,0,0.02)', textAlign: 'left' }}>
+                                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '11px', fontWeight: 600, color: '#475569', borderBottom: '1px solid #f1f5f9', paddingBottom: '6px' }}>
+                                    <span>Page {change.page} • {change.tableName}</span>
+                                    <span style={{ color: getSeverityColor(change.severity), textTransform: 'uppercase', fontSize: '10px', background: 'rgba(0,0,0,0.02)', padding: '2px 6px', borderRadius: '4px' }}>{change.severity} Severity</span>
+                                  </div>
+                                  
+                                  <p style={{ fontSize: '12.5px', fontWeight: 600, color: '#0f172a', margin: 0, padding: '8px 12px', background: '#f8fafc', borderLeft: `3px solid ${getSeverityColor(change.severity)}`, borderRadius: '0 4px 4px 0', lineHeight: '1.4' }}>
+                                    {change.description}
+                                  </p>
+
+                                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginTop: '4px' }}>
+                                    {/* Original */}
+                                    <div className={!change.originalText ? '' : 'print-diff-box-removed'} style={{ background: !change.originalText ? 'transparent' : '#fef2f2', border: !change.originalText ? '1px dashed #cbd5e1' : '1px solid #fee2e2', padding: '10px', borderRadius: '4px' }}>
+                                      <div style={{ fontSize: '8.5px', fontWeight: 700, color: !change.originalText ? '#64748b' : '#ef4444', textTransform: 'uppercase', marginBottom: '6px' }}>Original</div>
+                                      {!change.originalText ? (
+                                        <span style={{ fontSize: '11px', color: '#94a3b8', fontStyle: 'italic' }}>[No row/cell existed]</span>
+                                      ) : (
+                                        renderOriginalDiffText(change.originalText || '', change.revisedText || '')
+                                      )}
+                                    </div>
+                                    {/* Revised */}
+                                    <div className={!change.revisedText ? '' : 'print-diff-box-added'} style={{ background: !change.revisedText ? 'transparent' : '#f0fdf4', border: !change.revisedText ? '1px dashed #cbd5e1' : '1px solid #dcfce7', padding: '10px', borderRadius: '4px' }}>
+                                      <div style={{ fontSize: '8.5px', fontWeight: 700, color: !change.revisedText ? '#64748b' : '#21874c', textTransform: 'uppercase', marginBottom: '6px' }}>Revised</div>
+                                      {!change.revisedText ? (
+                                        <span style={{ fontSize: '11px', color: '#94a3b8', fontStyle: 'italic' }}>[Row/cell deleted]</span>
+                                      ) : (
+                                        renderRevisedDiffText(change.originalText || '', change.revisedText || '')
+                                      )}
+                                    </div>
+                                  </div>
+                                  
+                                  {showPotentialImpact && (
+                                    <div style={{ marginTop: '4px', padding: '8px 12px', background: '#f0f9ff', borderLeft: '3px solid #0284c7', fontSize: '11.5px', color: '#0369a1', borderRadius: '0 4px 4px 0', lineHeight: '1.4' }}>
+                                      <strong>Potential Impact ({sem.category} - {sem.obligation}):</strong> {change.potentialImpact || "No potential impact analysis logged."}
+                                    </div>
+                                  )}
+
+                                  {/* AI Explainer */}
+                                  <div style={{ marginTop: '8px', borderTop: '1px solid #e2e8f0', paddingTop: '10px' }}>
+                                    <button 
+                                      onClick={() => setExpandedExplainer(prev => ({ ...prev, [cardKey]: !prev[cardKey] }))}
+                                      style={{
+                                        background: 'none',
+                                        border: 'none',
+                                        color: '#015294',
+                                        fontSize: '12px',
+                                        fontWeight: 600,
+                                        cursor: 'pointer',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        padding: '4px 8px',
+                                        borderRadius: '4px',
+                                        transition: 'background 0.2s',
+                                      }}
+                                      onMouseEnter={(e) => e.currentTarget.style.background = '#f1f5f9'}
+                                      onMouseLeave={(e) => e.currentTarget.style.background = 'none'}
+                                    >
+                                      <span>{expandedExplainer[cardKey] ? "Hide AlloCap AI" : "Ask AlloCap AI"}</span>
+                                    </button>
+
+                                    {expandedExplainer[cardKey] && (
+                                      <div style={{ background: '#f8fafc', border: '1px solid #cbd5e1', borderRadius: '6px', padding: '12px', marginTop: '8px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                                        {/* Chat Message Thread */}
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '180px', overflowY: 'auto', padding: '4px' }}>
+                                          {(changeChats[cardKey] || []).length === 0 ? (
+                                            <div style={{ fontSize: '11.5px', color: '#64748b', fontStyle: 'italic', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                              <span>Ask a question about this change, or choose a suggested prompt below to analyze its details.</span>
+                                            </div>
+                                          ) : (
+                                            (changeChats[cardKey] || []).map((msg, mIdx) => (
+                                              <div key={mIdx} style={{ display: 'flex', flexDirection: 'column', gap: '2px', alignSelf: msg.role === 'user' ? 'flex-end' : 'flex-start', maxWidth: '85%' }}>
+                                                <div style={{
+                                                  padding: '6px 10px',
+                                                  borderRadius: '8px',
+                                                  fontSize: '11.5px',
+                                                  lineHeight: '1.4',
+                                                  background: msg.role === 'user' ? '#015294' : '#e2e8f0',
+                                                  color: msg.role === 'user' ? '#ffffff' : '#1e293b',
+                                                  border: msg.role === 'user' ? 'none' : '1px solid #cbd5e1'
+                                                }}>
+                                                  {msg.content}
+                                                </div>
+                                                <span style={{ fontSize: '9px', color: '#94a3b8', alignSelf: msg.role === 'user' ? 'flex-end' : 'flex-start', marginLeft: '4px', marginRight: '4px' }}>
+                                                  {msg.role === 'user' ? 'You' : 'AlloCap AI'}
+                                                </span>
+                                              </div>
+                                            ))
+                                          )}
+                                          {changeLoading[cardKey] && (
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', alignSelf: 'flex-start', background: '#e2e8f0', padding: '6px 10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '11px', color: '#64748b' }}>
+                                              <span>AlloCap AI is thinking...</span>
+                                            </div>
+                                          )}
+                                        </div>
+
+                                        {/* Suggested Questions */}
+                                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                                          <button 
+                                            onClick={() => handleSendChangeMessage(cardKey, "Summarize this change in simple terms", sem.category, change)}
+                                            disabled={changeLoading[cardKey]}
+                                            style={{ background: '#ffffff', border: '1px solid #cbd5e1', borderRadius: '12px', padding: '4px 10px', fontSize: '10px', cursor: 'pointer', color: '#334155', fontWeight: 500, transition: 'all 0.15s' }}
+                                            onMouseEnter={(e) => e.currentTarget.style.borderColor = '#015294'}
+                                            onMouseLeave={(e) => e.currentTarget.style.borderColor = '#cbd5e1'}
+                                          >
+                                            Summarize change
+                                          </button>
+                                          <button 
+                                            onClick={() => handleSendChangeMessage(cardKey, "What is the operational risk or timeline impact of this shift?", sem.category, change)}
+                                            disabled={changeLoading[cardKey]}
+                                            style={{ background: '#ffffff', border: '1px solid #cbd5e1', borderRadius: '12px', padding: '4px 10px', fontSize: '10px', cursor: 'pointer', color: '#334155', fontWeight: 500, transition: 'all 0.15s' }}
+                                            onMouseEnter={(e) => e.currentTarget.style.borderColor = '#015294'}
+                                            onMouseLeave={(e) => e.currentTarget.style.borderColor = '#cbd5e1'}
+                                          >
+                                            Operational risk?
+                                          </button>
+                                          <button 
+                                            onClick={() => handleSendChangeMessage(cardKey, "Does this change increase legal liability or financial obligations?", sem.category, change)}
+                                            disabled={changeLoading[cardKey]}
+                                            style={{ background: '#ffffff', border: '1px solid #cbd5e1', borderRadius: '12px', padding: '4px 10px', fontSize: '10px', cursor: 'pointer', color: '#334155', fontWeight: 500, transition: 'all 0.15s' }}
+                                            onMouseEnter={(e) => e.currentTarget.style.borderColor = '#015294'}
+                                            onMouseLeave={(e) => e.currentTarget.style.borderColor = '#cbd5e1'}
+                                          >
+                                            How does this affect liability?
+                                          </button>
+                                        </div>
+
+                                        {/* Chat Input box */}
+                                        <div style={{ display: 'flex', gap: '6px' }}>
+                                          <input 
+                                            type="text" 
+                                            value={changeInputs[cardKey] || ''}
+                                            onChange={(e) => setChangeInputs(prev => ({ ...prev, [cardKey]: e.target.value }))}
+                                            onKeyDown={(e) => {
+                                              if (e.key === 'Enter') {
+                                                handleSendChangeMessage(cardKey, changeInputs[cardKey] || '', sem.category, change);
+                                              }
+                                            }}
+                                            placeholder="Ask a custom question..."
+                                            disabled={changeLoading[cardKey]}
+                                            style={{ flex: 1, padding: '6px 10px', borderRadius: '4px', border: '1px solid #cbd5e1', fontSize: '11.5px', background: '#ffffff', color: '#0f172a' }}
+                                          />
+                                          <button 
+                                            onClick={() => handleSendChangeMessage(cardKey, changeInputs[cardKey] || '', sem.category, change)}
+                                            disabled={changeLoading[cardKey] || !(changeInputs[cardKey] || '').trim()}
+                                            style={{
+                                              background: '#015294',
+                                              color: '#ffffff',
+                                              border: 'none',
+                                              padding: '6px 12px',
+                                              borderRadius: '4px',
+                                              fontSize: '11px',
+                                              fontWeight: 600,
+                                              cursor: 'pointer',
+                                              display: 'flex',
+                                              alignItems: 'center',
+                                              opacity: (changeLoading[cardKey] || !(changeInputs[cardKey] || '').trim()) ? 0.6 : 1
+                                            }}
+                                          >
+                                            Send
+                                          </button>
+                                        </div>
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Section 4: Visual Changes */}
+                    {includeVisualChanges && (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                        <h3 style={{ fontSize: '14px', color: '#002A5D', fontWeight: 700, borderBottom: '1px solid #e2e8f0', paddingBottom: '4px' }}>{printSecVisual}. Visual & Layout Modifications</h3>
+                        {report.visualChanges.length === 0 ? (
+                          <p style={{ fontSize: '12px', color: '#64748b', fontStyle: 'italic', margin: 0 }}>No visual modifications identified.</p>
+                        ) : (
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                            {report.visualChanges.map((change, idx) => {
+                              const sem = getSemanticDetails(change.description, change.originalText, change.revisedText, change.severity, change.type);
+                              const cardKey = `visual-${idx}`;
+                              return (
+                                <div key={idx} style={{ border: '1px solid #e2e8f0', borderRadius: '6px', padding: '16px', display: 'flex', flexDirection: 'column', gap: '10px', boxShadow: '0 1px 3px rgba(0,0,0,0.02)', textAlign: 'left' }}>
+                                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '11px', fontWeight: 600, color: '#475569', borderBottom: '1px solid #f1f5f9', paddingBottom: '6px' }}>
+                                    <span>Page {change.page} • {(change.type || '').replace('_', ' ').toUpperCase()}</span>
+                                    <span style={{ color: getSeverityColor(change.severity), textTransform: 'uppercase', fontSize: '10px', background: 'rgba(0,0,0,0.02)', padding: '2px 6px', borderRadius: '4px' }}>{change.severity} Severity</span>
+                                  </div>
+                                  
+                                  <p style={{ fontSize: '12.5px', fontWeight: 600, color: '#0f172a', margin: 0, padding: '8px 12px', background: '#f8fafc', borderLeft: `3px solid ${getSeverityColor(change.severity)}`, borderRadius: '0 4px 4px 0', lineHeight: '1.4' }}>
+                                    {change.description}
+                                  </p>
+
+                                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginTop: '4px' }}>
+                                    {/* Original */}
+                                    <div className={!change.originalText ? '' : 'print-diff-box-removed'} style={{ background: !change.originalText ? 'transparent' : '#fef2f2', border: !change.originalText ? '1px dashed #cbd5e1' : '1px solid #fee2e2', padding: '10px', borderRadius: '4px' }}>
+                                      <div style={{ fontSize: '8.5px', fontWeight: 700, color: !change.originalText ? '#64748b' : '#ef4444', textTransform: 'uppercase', marginBottom: '6px' }}>Original</div>
+                                      {!change.originalText ? (
+                                        <span style={{ fontSize: '11px', color: '#94a3b8', fontStyle: 'italic' }}>[No visual element existed]</span>
+                                      ) : (
+                                        renderOriginalDiffText(change.originalText || '', change.revisedText || '')
+                                      )}
+                                    </div>
+                                    {/* Revised */}
+                                    <div className={!change.revisedText ? '' : 'print-diff-box-added'} style={{ background: !change.revisedText ? 'transparent' : '#f0fdf4', border: !change.revisedText ? '1px dashed #cbd5e1' : '1px solid #dcfce7', padding: '10px', borderRadius: '4px' }}>
+                                      <div style={{ fontSize: '8.5px', fontWeight: 700, color: !change.revisedText ? '#64748b' : '#21874c', textTransform: 'uppercase', marginBottom: '6px' }}>Revised</div>
+                                      {!change.revisedText ? (
+                                        <span style={{ fontSize: '11px', color: '#94a3b8', fontStyle: 'italic' }}>[Visual element deleted]</span>
+                                      ) : (
+                                        renderRevisedDiffText(change.originalText || '', change.revisedText || '')
+                                      )}
+                                    </div>
+                                  </div>
+                                  
+                                  {showPotentialImpact && (
+                                    <div style={{ marginTop: '4px', padding: '8px 12px', background: '#f0f9ff', borderLeft: '3px solid #0284c7', fontSize: '11.5px', color: '#0369a1', borderRadius: '0 4px 4px 0', lineHeight: '1.4' }}>
+                                      <strong>Potential Impact ({sem.category} - {sem.obligation}):</strong> {change.potentialImpact || "No potential impact analysis logged."}
+                                    </div>
+                                  )}
+
+                                  {/* AI Explainer */}
+                                  <div style={{ marginTop: '8px', borderTop: '1px solid #e2e8f0', paddingTop: '10px' }}>
+                                    <button 
+                                      onClick={() => setExpandedExplainer(prev => ({ ...prev, [cardKey]: !prev[cardKey] }))}
+                                      style={{
+                                        background: 'none',
+                                        border: 'none',
+                                        color: '#015294',
+                                        fontSize: '12px',
+                                        fontWeight: 600,
+                                        cursor: 'pointer',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        padding: '4px 8px',
+                                        borderRadius: '4px',
+                                        transition: 'background 0.2s',
+                                      }}
+                                      onMouseEnter={(e) => e.currentTarget.style.background = '#f1f5f9'}
+                                      onMouseLeave={(e) => e.currentTarget.style.background = 'none'}
+                                    >
+                                      <span>{expandedExplainer[cardKey] ? "Hide AlloCap AI" : "Ask AlloCap AI"}</span>
+                                    </button>
+
+                                    {expandedExplainer[cardKey] && (
+                                      <div style={{ background: '#f8fafc', border: '1px solid #cbd5e1', borderRadius: '6px', padding: '12px', marginTop: '8px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                                        {/* Chat Message Thread */}
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '180px', overflowY: 'auto', padding: '4px' }}>
+                                          {(changeChats[cardKey] || []).length === 0 ? (
+                                            <div style={{ fontSize: '11.5px', color: '#64748b', fontStyle: 'italic', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                              <span>Ask a question about this change, or choose a suggested prompt below to analyze its details.</span>
+                                            </div>
+                                          ) : (
+                                            (changeChats[cardKey] || []).map((msg, mIdx) => (
+                                              <div key={mIdx} style={{ display: 'flex', flexDirection: 'column', gap: '2px', alignSelf: msg.role === 'user' ? 'flex-end' : 'flex-start', maxWidth: '85%' }}>
+                                                <div style={{
+                                                  padding: '6px 10px',
+                                                  borderRadius: '8px',
+                                                  fontSize: '11.5px',
+                                                  lineHeight: '1.4',
+                                                  background: msg.role === 'user' ? '#015294' : '#e2e8f0',
+                                                  color: msg.role === 'user' ? '#ffffff' : '#1e293b',
+                                                  border: msg.role === 'user' ? 'none' : '1px solid #cbd5e1'
+                                                }}>
+                                                  {msg.content}
+                                                </div>
+                                                <span style={{ fontSize: '9px', color: '#94a3b8', alignSelf: msg.role === 'user' ? 'flex-end' : 'flex-start', marginLeft: '4px', marginRight: '4px' }}>
+                                                  {msg.role === 'user' ? 'You' : 'AlloCap AI'}
+                                                </span>
+                                              </div>
+                                            ))
+                                          )}
+                                          {changeLoading[cardKey] && (
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', alignSelf: 'flex-start', background: '#e2e8f0', padding: '6px 10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '11px', color: '#64748b' }}>
+                                              <span>AlloCap AI is thinking...</span>
+                                            </div>
+                                          )}
+                                        </div>
+
+                                        {/* Suggested Questions */}
+                                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                                          <button 
+                                            onClick={() => handleSendChangeMessage(cardKey, "Summarize this change in simple terms", sem.category, change)}
+                                            disabled={changeLoading[cardKey]}
+                                            style={{ background: '#ffffff', border: '1px solid #cbd5e1', borderRadius: '12px', padding: '4px 10px', fontSize: '10px', cursor: 'pointer', color: '#334155', fontWeight: 500, transition: 'all 0.15s' }}
+                                            onMouseEnter={(e) => e.currentTarget.style.borderColor = '#015294'}
+                                            onMouseLeave={(e) => e.currentTarget.style.borderColor = '#cbd5e1'}
+                                          >
+                                            Summarize change
+                                          </button>
+                                          <button 
+                                            onClick={() => handleSendChangeMessage(cardKey, "What is the operational risk or timeline impact of this shift?", sem.category, change)}
+                                            disabled={changeLoading[cardKey]}
+                                            style={{ background: '#ffffff', border: '1px solid #cbd5e1', borderRadius: '12px', padding: '4px 10px', fontSize: '10px', cursor: 'pointer', color: '#334155', fontWeight: 500, transition: 'all 0.15s' }}
+                                            onMouseEnter={(e) => e.currentTarget.style.borderColor = '#015294'}
+                                            onMouseLeave={(e) => e.currentTarget.style.borderColor = '#cbd5e1'}
+                                          >
+                                            Operational risk?
+                                          </button>
+                                          <button 
+                                            onClick={() => handleSendChangeMessage(cardKey, "Does this change increase legal liability or financial obligations?", sem.category, change)}
+                                            disabled={changeLoading[cardKey]}
+                                            style={{ background: '#ffffff', border: '1px solid #cbd5e1', borderRadius: '12px', padding: '4px 10px', fontSize: '10px', cursor: 'pointer', color: '#334155', fontWeight: 500, transition: 'all 0.15s' }}
+                                            onMouseEnter={(e) => e.currentTarget.style.borderColor = '#015294'}
+                                            onMouseLeave={(e) => e.currentTarget.style.borderColor = '#cbd5e1'}
+                                          >
+                                            How does this affect liability?
+                                          </button>
+                                        </div>
+
+                                        {/* Chat Input box */}
+                                        <div style={{ display: 'flex', gap: '6px' }}>
+                                          <input 
+                                            type="text" 
+                                            value={changeInputs[cardKey] || ''}
+                                            onChange={(e) => setChangeInputs(prev => ({ ...prev, [cardKey]: e.target.value }))}
+                                            onKeyDown={(e) => {
+                                              if (e.key === 'Enter') {
+                                                handleSendChangeMessage(cardKey, changeInputs[cardKey] || '', sem.category, change);
+                                              }
+                                            }}
+                                            placeholder="Ask a custom question..."
+                                            disabled={changeLoading[cardKey]}
+                                            style={{ flex: 1, padding: '6px 10px', borderRadius: '4px', border: '1px solid #cbd5e1', fontSize: '11.5px', background: '#ffffff', color: '#0f172a' }}
+                                          />
+                                          <button 
+                                            onClick={() => handleSendChangeMessage(cardKey, changeInputs[cardKey] || '', sem.category, change)}
+                                            disabled={changeLoading[cardKey] || !(changeInputs[cardKey] || '').trim()}
+                                            style={{
+                                              background: '#015294',
+                                              color: '#ffffff',
+                                              border: 'none',
+                                              padding: '6px 12px',
+                                              borderRadius: '4px',
+                                              fontSize: '11px',
+                                              fontWeight: 600,
+                                              cursor: 'pointer',
+                                              display: 'flex',
+                                              alignItems: 'center',
+                                              opacity: (changeLoading[cardKey] || !(changeInputs[cardKey] || '').trim()) ? 0.6 : 1
+                                            }}
+                                          >
+                                            Send
+                                          </button>
+                                        </div>
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Section 5: Comparison Notes & Sign-off */}
+                    {auditNotes.trim() && (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', borderTop: '2px solid #e2e8f0', paddingTop: '16px', marginTop: '12px' }}>
+                        <h3 style={{ fontSize: '14px', color: '#002A5D', fontWeight: 700 }}>{printSecSignoff}. Comparison Notes & Sign-Off</h3>
+                        <p style={{ fontSize: '12.5px', color: '#334155', lineHeight: '1.6', margin: 0, fontStyle: 'italic' }}>
+                          {auditNotes}
+                        </p>
+                        
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '40px', marginTop: '30px' }}>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                            <div style={{ borderBottom: '1px solid #cbd5e1', height: '24px' }}></div>
+                            <span style={{ fontSize: '11px', fontWeight: 600, color: '#475569' }}>Authorized Signature</span>
+                            <span style={{ fontSize: '10px', color: '#64748b' }}>Lead Reviewer</span>
+                          </div>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                            <div style={{ borderBottom: '1px solid #cbd5e1', height: '24px' }}></div>
+                            <span style={{ fontSize: '11px', fontWeight: 600, color: '#475569' }}>Sign-off Date</span>
+                            <span style={{ fontSize: '10px', color: '#64748b' }}>{auditDate}</span>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
                   </div>
 
                 </div>

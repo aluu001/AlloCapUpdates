@@ -142,7 +142,7 @@ app.delete('/api/files/:filename', (req: Request, res: Response) => {
 
 // 5. Compare two documents (streaming responses)
 app.post('/api/compare', async (req: Request, res: Response) => {
-  const { filenameA, filenameB } = req.body;
+  const { filenameA, filenameB, mode } = req.body;
 
   if (!filenameA || !filenameB) {
     return res.status(400).json({ error: 'Both filenameA and filenameB are required.' });
@@ -173,7 +173,7 @@ app.post('/api/compare', async (req: Request, res: Response) => {
   };
 
   try {
-    console.log(`Starting streaming comparison between ${displayNameA} and ${displayNameB}`);
+    console.log(`Starting streaming comparison between ${displayNameA} and ${displayNameB} (mode: ${mode || 'standard'})`);
     
     const report = await compareDocumentsStream(
       pathA,
@@ -186,7 +186,8 @@ app.post('/api/compare', async (req: Request, res: Response) => {
       (progressMsg) => {
         sendChunk({ type: 'progress', message: progressMsg });
         console.log(`[Compare Agent]: ${progressMsg}`);
-      }
+      },
+      mode
     );
 
     sendChunk({ type: 'report', success: true, report });
