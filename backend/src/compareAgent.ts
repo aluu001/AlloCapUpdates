@@ -98,6 +98,22 @@ const summarySchema = {
   required: ['overallSummary', 'riskRating']
 };
 
+// Define the JSON schema for document compatibility/alignment validation
+const documentValidationSchema = {
+  type: Type.OBJECT,
+  properties: {
+    related: {
+      type: Type.BOOLEAN,
+      description: 'True only if the two files are revisions, drafts, amendments, or different versions of the EXACT SAME base agreement, contract, or project document. False if they are different agreements/contracts entirely (even if they are of the same type like two different lease agreements), or cover completely different subject matters.'
+    },
+    reason: {
+      type: Type.STRING,
+      description: 'A detailed reason explaining why they are related or why they are completely unrelated.'
+    }
+  },
+  required: ['related', 'reason']
+};
+
 /**
  * Polls the Gemini Files API until the uploaded file state is ACTIVE.
  */
@@ -169,22 +185,20 @@ export async function compareDocumentsStream(
       model: GEMINI_MODEL,
       contents: [
         {
-          text: `You are an expert document auditor. Analyze the titles, subject matter, and general structure of these two uploaded documents. 
-          Are they versions of the same document, draft/final revisions of the same agreement, or otherwise closely related files?
-          If they are completely unrelated files (e.g. a lease agreement vs a cooking recipe, or two completely different subjects), you must flag them as mismatched.
-          
-          Format your answer strictly as a JSON object:
-          {
-            "related": true | false,
-            "reason": "A brief explanation of why they are related or why they are completely unrelated."
-          }
-          Do not include any markdown backticks or block formatting, just the raw JSON.`
+          text: `You are an expert document comparison auditor. You must analyze the content, titles, subject matter, entities/parties, and structure of these two uploaded documents and determine if they are compatible for comparison.
+
+          CRITICAL COMPATIBILITY RULES:
+          1. The documents MUST be revisions, drafts, amendments, or different versions of the EXACT SAME underlying agreement, contract, report, or specific project.
+          2. If the documents are different agreements entirely—even if they are of the same type (for example, two different lease agreements for different properties/tenants, or two different employment contracts for different people)—they are NOT compatible. You MUST flag them as mismatched (related = false).
+          3. If the documents cover completely different subject matters, programs, states, or purposes (for example, Georgia DHS CAP program vs a corporate handbook, or an expenditure audit vs a payroll data format), they are NOT compatible. You MUST flag them as mismatched (related = false).
+          4. Perform a rigorous, conservative assessment. If they are not versions of the same document, they are mismatched.`
         },
         { fileData: { fileUri: fileARef.uri, mimeType: fileARef.mimeType } },
         { fileData: { fileUri: fileBRef.uri, mimeType: fileBRef.mimeType } }
       ],
       config: {
         responseMimeType: 'application/json',
+        responseJsonSchema: documentValidationSchema,
         temperature: 0.1
       }
     });
