@@ -366,6 +366,7 @@ export default function App() {
   const [isDemoMode, setIsDemoMode] = useState(false);
   const [isConfigured, setIsConfigured] = useState(true);
   const [thinkingText, setThinkingText] = useState('');
+  const [comparisonError, setComparisonError] = useState<string | null>(null);
 
   // Chat State
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
@@ -890,6 +891,7 @@ User question about this specific difference: ${questionText}`;
   // Compare documents handler (supporting streaming thoughts)
   const handleCompare = async () => {
     if (!fileA || !fileB) return;
+    setComparisonError(null);
 
     // Demo Mode trigger if API not configured
     if (!isConfigured) {
@@ -988,10 +990,10 @@ User question about this specific difference: ${questionText}`;
                 ]);
                 setActiveTab('summary');
               } else {
-                alert(data.error || "Comparison failed");
+                setComparisonError(data.error || "Comparison failed");
               }
             } else if (data.type === 'error') {
-              alert(`Comparison Error: ${data.error}`);
+              setComparisonError(`Comparison Error: ${data.error}`);
             }
           } catch (err) {
             console.error("JSON parse error on stream line", err, line);
@@ -999,7 +1001,7 @@ User question about this specific difference: ${questionText}`;
         }
       }
     } catch (err: any) {
-      alert(`Error reaching backend: ${err.message}. Check if the server is running on port 5001.`);
+      setComparisonError(`Error reaching backend: ${err.message}. Check if the server is running on port 5001.`);
     } finally {
       setIsLoading(false);
     }
@@ -2179,6 +2181,36 @@ User question about this specific difference: ${questionText}`;
 
               {/* Core Content Area */}
               <div style={{ position: 'relative', minHeight: isLoading ? '600px' : '400px' }}>
+                
+                {/* Error Banner */}
+                {comparisonError && (
+                  <div 
+                    style={{ 
+                      background: '#fff1f2', 
+                      border: '1px solid #fda4af', 
+                      borderRadius: '8px', 
+                      padding: '16px 20px', 
+                      marginBottom: '20px',
+                      display: 'flex', 
+                      gap: '14px', 
+                      alignItems: 'flex-start',
+                      textAlign: 'left',
+                      boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05), 0 2px 4px -1px rgba(0,0,0,0.03)'
+                    }}
+                  >
+                    <div style={{ background: '#e11d48', color: '#fff', width: '24px', height: '24px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px', fontWeight: 'bold', flexShrink: 0, marginTop: '2px' }}>!</div>
+                    <div style={{ flex: 1 }}>
+                      <h4 style={{ margin: '0 0 4px 0', color: '#9f1239', fontSize: '14px', fontWeight: 700 }}>Comparison Issue Flagged</h4>
+                      <p style={{ margin: 0, fontSize: '13px', color: '#be123c', lineHeight: '1.5' }}>{comparisonError}</p>
+                    </div>
+                    <button 
+                      onClick={() => setComparisonError(null)}
+                      style={{ background: 'transparent', border: 'none', color: '#9f1239', cursor: 'pointer', fontWeight: 600, fontSize: '12px', padding: '2px 8px' }}
+                    >
+                      Dismiss
+                    </button>
+                  </div>
+                )}
                 
                 {/* 1. Loading Panel */}
                 {isLoading && (
