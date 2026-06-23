@@ -390,7 +390,7 @@ export default function App() {
   const [includeTableChanges, setIncludeTableChanges] = useState(true);
   const [includeVisualChanges, setIncludeVisualChanges] = useState(true);
   const [showPotentialImpact, setShowPotentialImpact] = useState(true);
-  const [comparisonMode, setComparisonMode] = useState<'standard' | 'thorough'>('standard');
+  const [comparisonMode, setComparisonMode] = useState<'summary' | 'standard' | 'thorough'>('summary');
   const [isCopied, setIsCopied] = useState(false);
   const [isCopiedMd, setIsCopiedMd] = useState(false);
   const [publisherViewMode, setPublisherViewMode] = useState<'html' | 'markdown' | 'database' | 'interactive'>('html');
@@ -1090,14 +1090,6 @@ User question about this specific difference: ${questionText}`;
     if (includeVisualChanges) { currentHtmlNum++; htmlSecVisual = currentHtmlNum; }
     if (auditNotes.trim()) { currentHtmlNum++; htmlSecSignoff = currentHtmlNum; }
 
-    const getSeverityColorHex = (sev: 'low' | 'medium' | 'high') => {
-      switch (sev) {
-        case 'high': return '#dc2626';
-        case 'medium': return '#d97706';
-        default: return '#16a34a';
-      }
-    };
-
     const escapeHtml = (text: string) => {
       return text
         .replace(/&/g, '&amp;')
@@ -1105,6 +1097,47 @@ User question about this specific difference: ${questionText}`;
         .replace(/>/g, '&gt;')
         .replace(/"/g, '&quot;')
         .replace(/'/g, '&#039;');
+    };
+
+    const convertMarkdownToHtmlString = (md: string): string => {
+      if (!md) return '';
+      const lines = md.split('\n');
+      return lines.map(line => {
+        const trimmed = line.trim();
+        if (trimmed === '---') {
+          return '<hr style="border: none; border-top: 1px solid #cbd5e1; margin: 15px 0;" />';
+        }
+        if (trimmed.startsWith('# ')) {
+          return `<h1 style="font-size: 20px; color: #002A5D; margin: 15px 0 8px 0; font-weight: bold;">${escapeHtml(trimmed.slice(2))}</h1>`;
+        }
+        if (trimmed.startsWith('## ')) {
+          return `<h2 style="font-size: 16px; color: #002A5D; margin: 12px 0 6px 0; font-weight: bold;">${escapeHtml(trimmed.slice(3))}</h2>`;
+        }
+        if (trimmed.startsWith('### ')) {
+          return `<h3 style="font-size: 14px; color: #002A5D; margin: 10px 0 4px 0; font-weight: bold;">${escapeHtml(trimmed.slice(4))}</h3>`;
+        }
+        if (trimmed.startsWith('- ') || trimmed.startsWith('* ')) {
+          let content = trimmed.slice(2);
+          content = content.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+          content = content.replace(/\*(.*?)\*/g, '<em>$1</em>');
+          return `<li style="font-size: 13px; color: #334155; margin-left: 20px; margin-bottom: 4px;">${content}</li>`;
+        }
+        if (trimmed === '') {
+          return '<br />';
+        }
+        let content = trimmed;
+        content = content.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+        content = content.replace(/\*(.*?)\*/g, '<em>$1</em>');
+        return `<p style="font-size: 13px; line-height: 1.6; color: #334155; margin: 8px 0;">${content}</p>`;
+      }).join('');
+    };
+
+    const getSeverityColorHex = (sev: 'low' | 'medium' | 'high') => {
+      switch (sev) {
+        case 'high': return '#dc2626';
+        case 'medium': return '#d97706';
+        default: return '#16a34a';
+      }
     };
 
     const getDiffHtml = (origText: string, revText: string, side: 'orig' | 'rev') => {
@@ -1151,7 +1184,7 @@ User question about this specific difference: ${questionText}`;
 
         <div style="margin-bottom: 25px;">
           <h2 style="font-size: 16px; color: #002A5D; border-bottom: 1px solid #cbd5e1; padding-bottom: 5px; font-weight: bold;">1. Executive Summary</h2>
-          <p style="font-size: 13px; line-height: 1.6; color: #334155; margin: 10px 0 0 0;">${escapeHtml(report.overallSummary)}</p>
+          <div style="margin-top: 10px;">${convertMarkdownToHtmlString(report.overallSummary)}</div>
         </div>
     `;
 
@@ -2112,6 +2145,25 @@ User question about this specific difference: ${questionText}`;
                   <label style={{ fontSize: '11px', fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Comparison Mode</label>
                   <div style={{ display: 'flex', background: '#f1f5f9', borderRadius: '6px', padding: '3px', border: '1px solid #e2e8f0' }}>
                     <button
+                      onClick={() => setComparisonMode('summary')}
+                      disabled={isLoading}
+                      style={{
+                        flex: 1,
+                        padding: '6px 12px',
+                        border: 'none',
+                        borderRadius: '4px',
+                        fontSize: '12px',
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                        background: comparisonMode === 'summary' ? '#015294' : 'transparent',
+                        color: comparisonMode === 'summary' ? '#ffffff' : '#64748b',
+                        boxShadow: comparisonMode === 'summary' ? '0 2px 4px rgba(1, 82, 148, 0.2)' : 'none',
+                        transition: 'all 0.2s'
+                      }}
+                    >
+                      Summary of Changes
+                    </button>
+                    <button
                       onClick={() => setComparisonMode('standard')}
                       disabled={isLoading}
                       style={{
@@ -2153,7 +2205,14 @@ User question about this specific difference: ${questionText}`;
                   
                   {/* Dynamic Mode Description Card */}
                   <div style={{ marginTop: '4px', background: '#f8fafc', border: '1px solid #cbd5e1', borderRadius: '6px', padding: '10px 14px', textAlign: 'left', boxShadow: 'inset 0 1px 2px rgba(0,0,0,0.01)' }}>
-                    {comparisonMode === 'standard' ? (
+                    {comparisonMode === 'summary' ? (
+                      <div>
+                        <div style={{ fontSize: '10px', fontWeight: 700, color: '#015294', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '4px' }}>📋 Summary of Changes Active</div>
+                        <p style={{ fontSize: '11.5px', color: '#475569', margin: 0, lineHeight: 1.4 }}>
+                          Generates a high-level, executive comparison report. Best for presenting a structured 1-to-2 page write-up of key material, financial, and operational differences to leadership, without individual change cards.
+                        </p>
+                      </div>
+                    ) : comparisonMode === 'standard' ? (
                       <div>
                         <div style={{ fontSize: '10px', fontWeight: 700, color: '#015294', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '4px' }}>⚡ Standard Mode Active</div>
                         <p style={{ fontSize: '11.5px', color: '#475569', margin: 0, lineHeight: 1.4 }}>
@@ -2353,27 +2412,31 @@ User question about this specific difference: ${questionText}`;
                       >
                         <LayoutGrid size={14} /> Summary
                       </button>
-                      <button 
-                        onClick={() => setActiveTab('text')}
-                        className={activeTab === 'text' ? 'btn-primary' : 'btn-secondary'}
-                        style={{ padding: '6px 12px', fontSize: '12px', borderRadius: '4px' }}
-                      >
-                        <FileText size={14} /> Text Changes ({report.textChanges.length})
-                      </button>
-                      <button 
-                        onClick={() => setActiveTab('tables')}
-                        className={activeTab === 'tables' ? 'btn-primary' : 'btn-secondary'}
-                        style={{ padding: '6px 12px', fontSize: '12px', borderRadius: '4px' }}
-                      >
-                        <Table size={14} /> Tables ({report.tableChanges.length})
-                      </button>
-                      <button 
-                        onClick={() => setActiveTab('visuals')}
-                        className={activeTab === 'visuals' ? 'btn-primary' : 'btn-secondary'}
-                        style={{ padding: '6px 12px', fontSize: '12px', borderRadius: '4px' }}
-                      >
-                        <Layers size={14} /> Visuals ({report.visualChanges.length})
-                      </button>
+                      {comparisonMode !== 'summary' && (
+                        <>
+                          <button 
+                            onClick={() => setActiveTab('text')}
+                            className={activeTab === 'text' ? 'btn-primary' : 'btn-secondary'}
+                            style={{ padding: '6px 12px', fontSize: '12px', borderRadius: '4px' }}
+                          >
+                            <FileText size={14} /> Text Changes ({report.textChanges.length})
+                          </button>
+                          <button 
+                            onClick={() => setActiveTab('tables')}
+                            className={activeTab === 'tables' ? 'btn-primary' : 'btn-secondary'}
+                            style={{ padding: '6px 12px', fontSize: '12px', borderRadius: '4px' }}
+                          >
+                            <Table size={14} /> Tables ({report.tableChanges.length})
+                          </button>
+                          <button 
+                            onClick={() => setActiveTab('visuals')}
+                            className={activeTab === 'visuals' ? 'btn-primary' : 'btn-secondary'}
+                            style={{ padding: '6px 12px', fontSize: '12px', borderRadius: '4px' }}
+                          >
+                            <Layers size={14} /> Visuals ({report.visualChanges.length})
+                          </button>
+                        </>
+                      )}
 
                       <button 
                         onClick={() => setIsChatOpen(true)}
@@ -2393,9 +2456,9 @@ User question about this specific difference: ${questionText}`;
                           <div style={{ display: 'grid', gridTemplateColumns: '1fr 220px', gap: '20px' }}>
                             <div className="glass-card" style={{ padding: '16px', borderLeft: '4px solid #015294' }}>
                               <h3 style={{ fontSize: '14px', marginBottom: '8px', color: '#203865' }}>Executive Summary</h3>
-                              <p style={{ fontSize: '13px', lineHeight: 1.5, color: '#334155' }}>
-                                {report.overallSummary}
-                              </p>
+                              <div style={{ fontSize: '13px', lineHeight: 1.5, color: '#334155' }}>
+                                {renderMarkdownAsHtml(report.overallSummary)}
+                              </div>
                             </div>
 
                             <div className="glass-card" style={{ padding: '16px', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', gap: '8px', background: '#f8fafc' }}>
@@ -2677,50 +2740,52 @@ User question about this specific difference: ${questionText}`;
                   </div>
 
                   {/* Section toggles */}
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', borderTop: '1px solid #e2e8f0', paddingTop: '12px' }}>
-                    <span style={{ fontSize: '11px', fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Include Sections</span>
-                    
-                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12.5px', cursor: 'pointer' }}>
-                      <input 
-                        type="checkbox" 
-                        checked={includeTextChanges}
-                        onChange={(e) => setIncludeTextChanges(e.target.checked)}
-                        style={{ cursor: 'pointer' }}
-                      />
-                      <span>Text Modifications ({report.textChanges.length})</span>
-                    </label>
+                  {comparisonMode !== 'summary' && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', borderTop: '1px solid #e2e8f0', paddingTop: '12px' }}>
+                      <span style={{ fontSize: '11px', fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Include Sections</span>
+                      
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12.5px', cursor: 'pointer' }}>
+                        <input 
+                          type="checkbox" 
+                          checked={includeTextChanges}
+                          onChange={(e) => setIncludeTextChanges(e.target.checked)}
+                          style={{ cursor: 'pointer' }}
+                        />
+                        <span>Text Modifications ({report.textChanges.length})</span>
+                      </label>
 
-                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12.5px', cursor: 'pointer' }}>
-                      <input 
-                        type="checkbox" 
-                        checked={includeTableChanges}
-                        onChange={(e) => setIncludeTableChanges(e.target.checked)}
-                        style={{ cursor: 'pointer' }}
-                      />
-                      <span>Table Modifications ({report.tableChanges.length})</span>
-                    </label>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12.5px', cursor: 'pointer' }}>
+                        <input 
+                          type="checkbox" 
+                          checked={includeTableChanges}
+                          onChange={(e) => setIncludeTableChanges(e.target.checked)}
+                          style={{ cursor: 'pointer' }}
+                        />
+                        <span>Table Modifications ({report.tableChanges.length})</span>
+                      </label>
 
-                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12.5px', cursor: 'pointer' }}>
-                      <input 
-                        type="checkbox" 
-                        checked={includeVisualChanges}
-                        onChange={(e) => setIncludeVisualChanges(e.target.checked)}
-                        style={{ cursor: 'pointer' }}
-                      />
-                      <span>Visual Modifications ({report.visualChanges.length})</span>
-                    </label>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12.5px', cursor: 'pointer' }}>
+                        <input 
+                          type="checkbox" 
+                          checked={includeVisualChanges}
+                          onChange={(e) => setIncludeVisualChanges(e.target.checked)}
+                          style={{ cursor: 'pointer' }}
+                        />
+                        <span>Visual Modifications ({report.visualChanges.length})</span>
+                      </label>
 
-                    <span style={{ fontSize: '11px', fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.5px', marginTop: '8px', borderTop: '1px solid #e2e8f0', paddingTop: '10px' }}>Display Settings</span>
-                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12.5px', cursor: 'pointer' }}>
-                      <input 
-                        type="checkbox" 
-                        checked={showPotentialImpact}
-                        onChange={(e) => setShowPotentialImpact(e.target.checked)}
-                        style={{ cursor: 'pointer' }}
-                      />
-                      <span>Show Potential Impact</span>
-                    </label>
-                  </div>
+                      <span style={{ fontSize: '11px', fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.5px', marginTop: '8px', borderTop: '1px solid #e2e8f0', paddingTop: '10px' }}>Display Settings</span>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12.5px', cursor: 'pointer' }}>
+                        <input 
+                          type="checkbox" 
+                          checked={showPotentialImpact}
+                          onChange={(e) => setShowPotentialImpact(e.target.checked)}
+                          style={{ cursor: 'pointer' }}
+                        />
+                        <span>Show Potential Impact</span>
+                      </label>
+                    </div>
+                  )}
 
                   {/* Action Buttons */}
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', borderTop: '1px solid #e2e8f0', paddingTop: '12px' }}>
@@ -2896,9 +2961,9 @@ User question about this specific difference: ${questionText}`;
                     {/* Section 1: Executive Summary */}
                     <div className="print-section" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                       <h3 style={{ fontSize: '14px', color: '#002A5D', fontWeight: 700, borderBottom: '1px solid #e2e8f0', paddingBottom: '4px' }}>1. Executive Summary</h3>
-                      <p style={{ fontSize: '12.5px', color: '#334155', lineHeight: '1.6', margin: 0 }}>
-                        {report.overallSummary}
-                      </p>
+                      <div style={{ fontSize: '12.5px', color: '#334155', lineHeight: '1.6' }}>
+                        {renderMarkdownAsHtml(report.overallSummary)}
+                      </div>
                     </div>
 
                     {/* Section 2: Text Changes */}

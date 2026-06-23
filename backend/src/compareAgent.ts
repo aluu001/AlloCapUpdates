@@ -190,7 +190,7 @@ export async function compareDocumentsStream(
   fileBName: string,
   onThought: (thought: string) => void,
   onProgress: (msg: string) => void,
-  mode: 'standard' | 'thorough' = 'standard'
+  mode: 'summary' | 'standard' | 'thorough' = 'standard'
 ) {
   let fileARef: any = null;
   let fileBRef: any = null;
@@ -198,8 +198,8 @@ export async function compareDocumentsStream(
   let tempDirPath: string | null = null;
 
   try {
-    // 5. STANDARD MODE: Fast Single-Pass Comparison
-    if (mode === 'standard') {
+    // 5. STANDARD & SUMMARY MODES: Fast Single-Pass Comparison
+    if (mode === 'standard' || mode === 'summary') {
       onProgress(`Uploading Original Document (${fileAName}) to Gemini Files API...`);
       fileARef = await ai.files.upload({
         file: fileAPath,
@@ -267,12 +267,32 @@ export async function compareDocumentsStream(
         throw new Error(`Document Mismatch: ${mismatchReason}`);
       }
 
-      onProgress('Comparing documents textually and visually in Standard Mode...');
+      onProgress(mode === 'summary' ? 'Generating Executive Summary of Changes...' : 'Comparing documents textually and visually in Standard Mode...');
       const responseStream = await ai.models.generateContentStream({
         model: GEMINI_MODEL,
         contents: [
           {
-            text: `You are an expert document auditor. Compare the following two documents in detail.
+            text: mode === 'summary'
+              ? `You are an expert executive document auditor. Compare the following two documents:
+            Document A is the Original document (name: "${fileAName}").
+            Document B is the Revised document (name: "${fileBName}").
+            
+            Perform a high-level comparison to produce an executive write-up of the key differences.
+            This write-up is intended to be presented to C-level executives. It should be a comprehensive, structured, 1-to-2 page report (approximately 500-1000 words).
+            
+            Format the executive write-up in markdown inside the 'overallSummary' field.
+            Use the following clear sections in your markdown write-up:
+            - **Executive Summary & Overview**: A concise statement of the overall purpose of the documents and the scope of changes.
+            - **Key Material Differences**: The most critical differences, such as commercial, operational, or legal shifts.
+            - **Financial & Liability Impacts**: Detail any financial adjustments, liability changes, or pricing shifts.
+            - **Operational & Compliance Implications**: Summarize how execution, timelines, or compliance reporting requirements change.
+            - **Strategic Recommendations**: Executive guidance on risks or opportunities identified.
+            
+            Use bold headings, clean bullet points, and paragraphs in your markdown content.
+            
+            For the 'riskRating' field, assign a rating of 'low', 'medium', or 'high'.
+            For the 'textChanges', 'tableChanges', and 'visualChanges' fields, return empty arrays [].`
+              : `You are an expert document auditor. Compare the following two documents in detail.
             Document A is the Original document (name: "${fileAName}").
             Document B is the Revised document (name: "${fileBName}").
             
